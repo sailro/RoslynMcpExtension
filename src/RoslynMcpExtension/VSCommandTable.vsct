@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CommandTable xmlns="http://schemas.microsoft.com/VisualStudio/2005-10-18/CommandTable" xmlns:xs="http://www.w3.org/2001/XMLSchema">
+  <Extern href="stdidcmd.h"/>
+  <Extern href="vsshlids.h"/>
+
+  <Commands package="guidRoslynMcpPackage">
+    <Groups>
+      <Group guid="guidRoslynMcpCmdSet" id="McpMenuGroup" priority="0x0600">
+        <Parent guid="guidSHLMainMenu" id="IDM_VS_MENU_TOOLS"/>
+      </Group>
+    </Groups>
+
+    <Buttons>
+      <Button guid="guidRoslynMcpCmdSet" id="cmdStartServer" priority="0x0100" type="Button">
+        <Parent guid="guidRoslynMcpCmdSet" id="McpMenuGroup"/>
+        <Strings>
+          <ButtonText>Start Roslyn MCP Server</ButtonText>
+        </Strings>
+      </Button>
+      <Button guid="guidRoslynMcpCmdSet" id="cmdStopServer" priority="0x0101" type="Button">
+        <Parent guid="guidRoslynMcpCmdSet" id="McpMenuGroup"/>
+        <Strings>
+          <ButtonText>Stop Roslyn MCP Server</ButtonText>
+        </Strings>
+      </Button>
+    </Buttons>
+  </Commands>
+
+  <Symbols>
+    <GuidSymbol name="guidRoslynMcpPackage" value="{b8a7f3e2-1c4d-4e5f-9a6b-8c7d0e1f2a3b}" />
+    <GuidSymbol name="guidRoslynMcpCmdSet" value="{a1b2c3d4-e5f6-7890-abcd-ef1234567890}">
+      <IDSymbol name="McpMenuGroup" value="0x1020"/>
+      <IDSymbol name="cmdStartServer" value="0x0100"/>
+      <IDSymbol name="cmdStopServer" value="0x0101"/>
+    </GuidSymbol>
+  </Symbols>
+</CommandTable>
