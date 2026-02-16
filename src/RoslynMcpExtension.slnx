@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="RoslynMcpExtension.Server/RoslynMcpExtension.Server.csproj" />
+  <Project Path="RoslynMcpExtension.Shared/RoslynMcpExtension.Shared.csproj" />
+  <Project Path="RoslynMcpExtension/RoslynMcpExtension.csproj" />
+</Solution>
