@@ -33,6 +33,4 @@ x86/
 Thumbs.db
 Desktop.ini
 .DS_Store
-
-# plan file (not part of the project)
-plan.txt
+launchSettings.json

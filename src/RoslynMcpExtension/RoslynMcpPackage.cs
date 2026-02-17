@@ -9,9 +9,10 @@ using RoslynMcpExtension.Services;
 
 namespace RoslynMcpExtension;
 
+[ProvideBindingPath]
 [PackageRegistration(UseManagedResourcesOnly = true, AllowsBackgroundLoading = true)]
-[InstalledProductRegistration("Roslyn MCP Server", "Exposes Roslyn code analysis via MCP", "1.0.0")]
-[ProvideOptionPage(typeof(SettingsPage), "Roslyn MCP Server", "General", 0, 0, true)]
+[InstalledProductRegistration("Roslyn MCP Extension", "Exposes Roslyn code analysis via MCP", "1.0.0")]
+[ProvideOptionPage(typeof(SettingsPage), "Roslyn MCP Extension", "General", 0, 0, true)]
 [ProvideAutoLoad(VSConstants.UICONTEXT.SolutionExists_string, PackageAutoLoadFlags.BackgroundLoad)]
 [Guid("b8a7f3e2-1c4d-4e5f-9a6b-8c7d0e1f2a3b")]
 [ProvideMenuResource("Menus.ctmenu", 1)]
@@ -30,10 +31,12 @@ public sealed class RoslynMcpPackage : AsyncPackage
 
         Instance = this;
 
-        var componentModel = (IComponentModel)await GetServiceAsync(typeof(SComponentModel));
+        if (await GetServiceAsync(typeof(SComponentModel)) is not IComponentModel componentModel)
+	        return;
+
         AnalysisService = componentModel.GetService<RoslynAnalysisService>();
         RpcServer = new RpcServer(AnalysisService);
-        ProcessManager = new ServerProcessManager(this);
+        ProcessManager = new ServerProcessManager();
 
         await ServerCommands.InitializeAsync(this);
 
@@ -44,7 +47,7 @@ public sealed class RoslynMcpPackage : AsyncPackage
             {
                 var pipeName = RpcServer.Start();
                 await ProcessManager.StartAsync(pipeName, settings.Port, settings.ServerName);
-            });
+            }, cancellationToken);
         }
     }
 
@@ -52,7 +55,7 @@ public sealed class RoslynMcpPackage : AsyncPackage
     {
         if (disposing)
         {
-            ProcessManager?.StopAsync().GetAwaiter().GetResult();
+            _ = ProcessManager?.StopAsync();
             RpcServer?.Dispose();
             Instance = null;
         }

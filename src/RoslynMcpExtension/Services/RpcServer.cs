@@ -2,35 +2,20 @@ using System;
 using System.IO.Pipes;
 using System.Threading;
 using System.Threading.Tasks;
-using RoslynMcpExtension.Shared;
 using StreamJsonRpc;
 
 namespace RoslynMcpExtension.Services;
 
-/// <summary>
-/// Named pipe JSON-RPC server that runs inside the VS extension process.
-/// Delegates incoming RPC calls to the RoslynAnalysisService.
-/// </summary>
-public sealed class RpcServer : IDisposable
+public sealed class RpcServer(RoslynAnalysisService analysisService) : IDisposable
 {
-    private readonly RoslynAnalysisService _analysisService;
-    private NamedPipeServerStream? _pipeServer;
+	private NamedPipeServerStream? _pipeServer;
     private JsonRpc? _jsonRpc;
     private CancellationTokenSource? _cts;
     private string? _pipeName;
     private bool _disposed;
 
     public bool IsRunning => _jsonRpc != null && !_disposed;
-    public string? PipeName => _pipeName;
 
-    public RpcServer(RoslynAnalysisService analysisService)
-    {
-        _analysisService = analysisService;
-    }
-
-    /// <summary>
-    /// Starts the named pipe server and returns the pipe name.
-    /// </summary>
     public string Start()
     {
         if (_disposed) throw new ObjectDisposedException(nameof(RpcServer));
@@ -50,6 +35,9 @@ public sealed class RpcServer : IDisposable
         {
             try
             {
+                _pipeServer?.Dispose();
+                _pipeServer = null;
+
                 _pipeServer = new NamedPipeServerStream(
                     _pipeName!,
                     PipeDirection.InOut,
@@ -59,15 +47,14 @@ public sealed class RpcServer : IDisposable
 
                 await _pipeServer.WaitForConnectionAsync(cancellationToken);
 
-                _jsonRpc = JsonRpc.Attach(_pipeServer, _analysisService);
-                _jsonRpc.Disconnected += (s, e) =>
+                _jsonRpc = JsonRpc.Attach(_pipeServer, analysisService);
+                _jsonRpc.Disconnected += (_, _) =>
                 {
                     _jsonRpc = null;
                     _pipeServer?.Dispose();
                     _pipeServer = null;
                 };
 
-                // Wait for disconnect before accepting a new connection
                 await _jsonRpc.Completion;
             }
             catch (OperationCanceledException)
@@ -76,7 +63,6 @@ public sealed class RpcServer : IDisposable
             }
             catch (Exception)
             {
-                // Brief delay before retry
                 await Task.Delay(1000, cancellationToken);
             }
         }

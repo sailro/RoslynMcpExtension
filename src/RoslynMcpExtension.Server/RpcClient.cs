@@ -4,7 +4,6 @@ using System.IO.Pipes;
 using System.Threading;
 using System.Threading.Tasks;
 using RoslynMcpExtension.Shared;
-using RoslynMcpExtension.Shared.Models;
 using StreamJsonRpc;
 
 namespace RoslynMcpExtension.Server;
@@ -13,20 +12,14 @@ namespace RoslynMcpExtension.Server;
 /// Named pipe JSON-RPC client that connects to the VS extension process
 /// and proxies IRoslynAnalysisRpc calls.
 /// </summary>
-public sealed class RpcClient : IRoslynAnalysisRpc, IServerRpc, IDisposable
+public sealed class RpcClient(CancellationTokenSource shutdownCts) : IRoslynAnalysisRpc, IServerRpc, IDisposable
 {
-    private readonly CancellationTokenSource _shutdownCts;
-    private NamedPipeClientStream? _pipeClient;
+	private NamedPipeClientStream? _pipeClient;
     private JsonRpc? _jsonRpc;
     private IRoslynAnalysisRpc? _proxy;
     private bool _disposed;
 
     public bool IsConnected => _pipeClient?.IsConnected ?? false;
-
-    public RpcClient(CancellationTokenSource shutdownCts)
-    {
-        _shutdownCts = shutdownCts;
-    }
 
     public async Task ConnectAsync(string pipeName, int timeoutMs = 15000)
     {
@@ -56,7 +49,7 @@ public sealed class RpcClient : IRoslynAnalysisRpc, IServerRpc, IDisposable
     public Task ShutdownAsync()
     {
         Console.Error.WriteLine("Shutdown requested via RPC");
-        _shutdownCts.Cancel();
+        shutdownCts.Cancel();
         return Task.CompletedTask;
     }
 
@@ -78,7 +71,4 @@ public sealed class RpcClient : IRoslynAnalysisRpc, IServerRpc, IDisposable
 
     public Task<SymbolDetailInfo> GetSymbolInfoAsync(string filePath, int line, int column)
         => Proxy.GetSymbolInfoAsync(filePath, line, column);
-
-    public Task<List<ComplexityInfo>> AnalyzeComplexityAsync(string filePath)
-        => Proxy.AnalyzeComplexityAsync(filePath);
 }

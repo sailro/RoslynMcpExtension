@@ -6,18 +6,15 @@ using ModelContextProtocol.Server;
 namespace RoslynMcpExtension.Server.Tools;
 
 [McpServerToolType]
-public sealed class SearchSymbolsTool
+public sealed class SearchSymbolsTool(RpcClient rpc)
 {
-    private readonly RpcClient _rpc;
-    public SearchSymbolsTool(RpcClient rpc) => _rpc = rpc;
-
-    [McpServerTool(Name = "roslyn_search_symbols")]
+	[McpServerTool(Name = "roslyn_search_symbols")]
     [Description("Searches for symbol declarations across the entire solution by name. Uses Roslyn's SymbolFinder for accurate results matching types, methods, properties, and fields.")]
     public async Task<string> SearchSymbols(
         [Description("Search query (symbol name or partial name, case-insensitive)")] string query,
         [Description("Maximum number of results to return (default: 30)")] int maxResults = 30)
     {
-        var result = await _rpc.SearchSymbolsAsync(query, maxResults);
+        var result = await rpc.SearchSymbolsAsync(query, maxResults);
 
         if (result.ErrorMessage != null)
             return $"Error: {result.ErrorMessage}";

@@ -15,8 +15,8 @@ internal static class ServerCommands
     {
         await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
 
-        var commandService = await package.GetServiceAsync(typeof(IMenuCommandService)) as OleMenuCommandService;
-        if (commandService == null) return;
+        if (await package.GetServiceAsync(typeof(IMenuCommandService)) is not OleMenuCommandService commandService) 
+	        return;
 
         commandService.AddCommand(new MenuCommand(OnStartServer, new CommandID(CommandSet, StartCommandId)));
         commandService.AddCommand(new MenuCommand(OnStopServer, new CommandID(CommandSet, StopCommandId)));

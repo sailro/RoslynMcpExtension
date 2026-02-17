@@ -1,4 +1,4 @@
-# Roslyn MCP Server — Visual Studio Extension
+# Roslyn MCP Extension — Visual Studio Extension
 
 A Visual Studio extension that exposes **semantic C# code analysis** via the [Model Context Protocol (MCP)](https://modelcontextprotocol.io/), powered by the **live Roslyn workspace** inside Visual Studio.
 
@@ -44,7 +44,7 @@ The VSIX project automatically publishes the MCP server process to its output di
 
 ### Starting the Server
 
-The server auto-starts when a solution is loaded (configurable in **Tools > Options > Roslyn MCP Server**).
+The server auto-starts when a solution is loaded (configurable in **Tools > Options > Roslyn MCP Extension**).
 
 You can also manually start/stop via **Tools > Start/Stop Roslyn MCP Server**.
 
@@ -103,9 +103,9 @@ Find all references to the method ProcessOrder in C:\MyProject\src\OrderService.
 Search for all symbols named "Repository" in the current solution
 ```
 
-## How It Differs from Other "Offline" Roslyn MCP Servers
+## How It Differs from Other Roslyn MCP Servers
 
-| Feature | This Extension | Others "Offline" roslyn/mcp servers |
+| Feature | This Extension | Others roslyn/mcp servers |
 |---------|---------------|---------------------------------------|
 | Workspace | Live VS `VisualStudioWorkspace` | Standalone `MSBuildWorkspace` |
 | Unsaved changes | ✅ Sees current editor state | ❌ Only saved files |

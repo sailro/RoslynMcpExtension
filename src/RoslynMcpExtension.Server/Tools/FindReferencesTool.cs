@@ -6,12 +6,9 @@ using ModelContextProtocol.Server;
 namespace RoslynMcpExtension.Server.Tools;
 
 [McpServerToolType]
-public sealed class FindReferencesTool
+public sealed class FindReferencesTool(RpcClient rpc)
 {
-    private readonly RpcClient _rpc;
-    public FindReferencesTool(RpcClient rpc) => _rpc = rpc;
-
-    [McpServerTool(Name = "roslyn_find_references")]
+	[McpServerTool(Name = "roslyn_find_references")]
     [Description("Finds all references to a symbol at a given position using Roslyn's semantic analysis. Returns definition and usage locations across the entire solution. Much more accurate than text search.")]
     public async Task<string> FindReferences(
         [Description("Absolute path to the C# file")] string filePath,
@@ -19,7 +16,7 @@ public sealed class FindReferencesTool
         [Description("Column number (1-based)")] int column,
         [Description("Maximum number of results to return (default: 50)")] int maxResults = 50)
     {
-        var result = await _rpc.FindReferencesAsync(filePath, line, column, maxResults);
+        var result = await rpc.FindReferencesAsync(filePath, line, column, maxResults);
 
         if (result.ErrorMessage != null)
             return $"Error: {result.ErrorMessage}";

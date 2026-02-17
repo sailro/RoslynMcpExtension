@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net48</TargetFramework>
@@ -15,17 +15,24 @@
     <StartAction>Program</StartAction>
     <StartProgram>$(DevEnvDir)devenv.exe</StartProgram>
     <StartArguments>/rootsuffix Exp</StartArguments>
+    <CustomAfterMicrosoftCSharpTargets Condition="$(VsSDKInstall) != ''">$(VsSDKInstall)\Microsoft.VsSDK.targets</CustomAfterMicrosoftCSharpTargets>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Community.VisualStudio.Toolkit.17" Version="17.0.507" />
+    <VSCTCompile Include="VSCommandTable.vsct">
+      <ResourceName>Menus.ctmenu</ResourceName>
+    </VSCTCompile>
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Community.VisualStudio.Toolkit.17" Version="17.0.549" />
     <PackageReference Include="Microsoft.VSSDK.BuildTools" Version="17.14.2120">
       <IncludeAssets>build; runtime</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="Microsoft.VisualStudio.SDK" Version="17.14.39341" />
+    <PackageReference Include="Microsoft.VisualStudio.SDK" Version="17.14.40265" />
     <PackageReference Include="Microsoft.VisualStudio.LanguageServices" Version="4.14.0" />
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="4.14.0" />
-    <PackageReference Include="StreamJsonRpc" Version="2.21.62" />
+    <PackageReference Include="StreamJsonRpc" Version="2.24.84" />
   </ItemGroup>
 
   <ItemGroup>
@@ -39,6 +46,20 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <Link>McpServer\%(RecursiveDir)%(Filename)%(Extension)</Link>
       <Visible>false</Visible>
+    </Content>
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Remove="../../LICENSE" />
+    <None Remove="../../README.md" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="../../LICENSE">
+      <IncludeInVSIX>true</IncludeInVSIX>
+    </Content>
+    <Content Include="../../README.md">
+      <IncludeInVSIX>true</IncludeInVSIX>
     </Content>
   </ItemGroup>
 

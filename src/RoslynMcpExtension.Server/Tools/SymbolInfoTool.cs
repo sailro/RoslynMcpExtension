@@ -7,19 +7,16 @@ using ModelContextProtocol.Server;
 namespace RoslynMcpExtension.Server.Tools;
 
 [McpServerToolType]
-public sealed class SymbolInfoTool
+public sealed class SymbolInfoTool(RpcClient rpc)
 {
-    private readonly RpcClient _rpc;
-    public SymbolInfoTool(RpcClient rpc) => _rpc = rpc;
-
-    [McpServerTool(Name = "roslyn_get_symbol_info")]
+	[McpServerTool(Name = "roslyn_get_symbol_info")]
     [Description("Gets detailed type and metadata information for a symbol at a specific position. Returns accessibility, modifiers, base types, interfaces, parameters, and XML documentation.")]
     public async Task<string> GetSymbolInfo(
         [Description("Absolute path to the C# file")] string filePath,
         [Description("Line number (1-based)")] int line,
         [Description("Column number (1-based)")] int column)
     {
-        var result = await _rpc.GetSymbolInfoAsync(filePath, line, column);
+        var result = await rpc.GetSymbolInfoAsync(filePath, line, column);
 
         if (result.ErrorMessage != null)
             return $"Error: {result.ErrorMessage}";
@@ -40,9 +37,11 @@ public sealed class SymbolInfoTool
             result.IsVirtual ? "virtual" : null,
             result.IsOverride ? "override" : null,
             result.IsSealed ? "sealed" : null
-        }.Where(f => f != null);
+        }
+	        .Where(f => f != null)
+	        .ToArray();
 
-        if (flags.Any())
+        if (flags.Length != 0)
             sb.AppendLine($"Modifiers: {string.Join(", ", flags)}");
 
         if (result.ContainingType != null)
