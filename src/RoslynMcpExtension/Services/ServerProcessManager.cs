@@ -17,7 +17,8 @@ public sealed class ServerProcessManager()
 		    return;
 
 	    var extensionDir = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
-	    var serverPath = Path.Combine(extensionDir!, "McpServer", "RoslynMcpExtension.Server.dll");
+	    var serverDir = Path.Combine(extensionDir!, "McpServer");
+	    var serverPath = Path.Combine(serverDir, "RoslynMcpExtension.Server.dll");
 
 	    if (!File.Exists(serverPath))
 	    {
@@ -31,6 +32,7 @@ public sealed class ServerProcessManager()
 			{
 				FileName = "dotnet",
 				Arguments = $"\"{serverPath}\" --pipe \"{pipeName}\" --port {port} --name \"{serverName}\"",
+				WorkingDirectory = serverDir,
 				UseShellExecute = false,
 				CreateNoWindow = true,
 				RedirectStandardError = true
@@ -63,7 +65,7 @@ public sealed class ServerProcessManager()
 			return;
 		}
 
-		await WriteOutputAsync($"MCP Server started on http://localhost:{port} (pipe: {pipeName})");
+		await WriteOutputAsync($"MCP Server started on http://localhost:{port}/mcp (pipe: {pipeName})");
     }
 
     public async Task StopAsync()

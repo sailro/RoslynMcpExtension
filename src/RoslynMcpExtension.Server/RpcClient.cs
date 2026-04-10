@@ -69,6 +69,9 @@ public sealed class RpcClient(CancellationTokenSource shutdownCts) : IRoslynAnal
     public Task<SearchSymbolsResult> SearchSymbolsAsync(string query, int maxResults)
         => Proxy.SearchSymbolsAsync(query, maxResults);
 
+    public Task<DeadCodeAnalysisResult> FindDeadCodeAsync(int maxResults, bool includeInternal, bool includePublic)
+        => Proxy.FindDeadCodeAsync(maxResults, includeInternal, includePublic);
+
     public Task<SymbolDetailInfo> GetSymbolInfoAsync(string filePath, int line, int column)
         => Proxy.GetSymbolInfoAsync(filePath, line, column);
 }

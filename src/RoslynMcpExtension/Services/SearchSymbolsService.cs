@@ -44,6 +44,7 @@ internal class SearchSymbolsService(DocumentFinder documentFinder)
 						FilePath = loc.SourceTree?.FilePath ?? string.Empty,
 						StartLine = lineSpan.StartLinePosition.Line + 1,
 						StartColumn = lineSpan.StartLinePosition.Character + 1,
+						ProjectName = project.Name,
 						ContainingType = symbol.ContainingType?.ToDisplayString(),
 						ContainingNamespace = symbol.ContainingNamespace?.ToDisplayString()
 					});

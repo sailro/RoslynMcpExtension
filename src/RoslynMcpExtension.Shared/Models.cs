@@ -13,16 +13,20 @@ public class ValidateFileResult
     public string? ErrorMessage { get; set; }
 }
 
-public class DiagnosticInfo
+public class SourceLocationInfo
 {
-    public string Id { get; set; } = string.Empty;
-    public string Message { get; set; } = string.Empty;
-    public string Severity { get; set; } = string.Empty;
     public string FilePath { get; set; } = string.Empty;
     public int StartLine { get; set; }
     public int StartColumn { get; set; }
     public int EndLine { get; set; }
     public int EndColumn { get; set; }
+}
+
+public class DiagnosticInfo : SourceLocationInfo
+{
+    public string Id { get; set; } = string.Empty;
+    public string Message { get; set; } = string.Empty;
+    public string Severity { get; set; } = string.Empty;
     public string? Category { get; set; }
 }
 
@@ -37,13 +41,8 @@ public class FindReferencesResult
     public string? ErrorMessage { get; set; }
 }
 
-public class ReferenceLocationInfo
+public class ReferenceLocationInfo : SourceLocationInfo
 {
-    public string FilePath { get; set; } = string.Empty;
-    public int StartLine { get; set; }
-    public int StartColumn { get; set; }
-    public int EndLine { get; set; }
-    public int EndColumn { get; set; }
     public string Preview { get; set; } = string.Empty;
     public string? ContainingMember { get; set; }
     public bool IsDefinition { get; set; }
@@ -60,31 +59,11 @@ public class GoToDefinitionResult
     public string? ErrorMessage { get; set; }
 }
 
-public class DefinitionLocationInfo
+public class DefinitionLocationInfo : SourceLocationInfo
 {
-    public string FilePath { get; set; } = string.Empty;
-    public int StartLine { get; set; }
-    public int StartColumn { get; set; }
-    public int EndLine { get; set; }
-    public int EndColumn { get; set; }
     public string Preview { get; set; } = string.Empty;
     public bool IsFromMetadata { get; set; }
     public string? AssemblyName { get; set; }
-}
-
-public class DocumentSymbolInfo
-{
-    public string Name { get; set; } = string.Empty;
-    public string FullName { get; set; } = string.Empty;
-    public string Kind { get; set; } = string.Empty;
-    public string? ReturnType { get; set; }
-    public string Accessibility { get; set; } = string.Empty;
-    public int StartLine { get; set; }
-    public int StartColumn { get; set; }
-    public int EndLine { get; set; }
-    public int EndColumn { get; set; }
-    public List<string> Modifiers { get; set; } = [];
-    public List<DocumentSymbolInfo> Children { get; set; } = [];
 }
 
 public class SearchSymbolsResult
@@ -95,16 +74,30 @@ public class SearchSymbolsResult
     public string? ErrorMessage { get; set; }
 }
 
-public class SymbolSearchInfo
+public class DeadCodeAnalysisResult
+{
+    public List<SymbolSearchInfo> Members { get; set; } = [];
+    public int TotalCount { get; set; }
+    public bool Truncated { get; set; }
+    public string? ErrorMessage { get; set; }
+}
+
+public class SymbolSearchInfo : SourceLocationInfo
 {
     public string Name { get; set; } = string.Empty;
     public string FullName { get; set; } = string.Empty;
     public string Kind { get; set; } = string.Empty;
-    public string FilePath { get; set; } = string.Empty;
-    public int StartLine { get; set; }
-    public int StartColumn { get; set; }
+    public string? ProjectName { get; set; }
     public string? ContainingType { get; set; }
     public string? ContainingNamespace { get; set; }
+}
+
+public class DocumentSymbolInfo : SymbolSearchInfo
+{
+    public string? ReturnType { get; set; }
+    public string Accessibility { get; set; } = string.Empty;
+    public List<string> Modifiers { get; set; } = [];
+    public List<DocumentSymbolInfo> Children { get; set; } = [];
 }
 
 public class SymbolDetailInfo

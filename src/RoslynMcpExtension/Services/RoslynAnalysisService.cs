@@ -28,6 +28,9 @@ public class RoslynAnalysisService(VisualStudioWorkspace workspace) : IRoslynAna
 	public Task<SearchSymbolsResult> SearchSymbolsAsync(string query, int maxResults)
 		=> new SearchSymbolsService(_documentFinder).SearchSymbolsAsync(query, maxResults);
 
+	public Task<DeadCodeAnalysisResult> FindDeadCodeAsync(int maxResults, bool includeInternal, bool includePublic)
+		=> new DeadCodeAnalysisService(_documentFinder).FindDeadCodeAsync(maxResults, includeInternal, includePublic);
+
 	public Task<SymbolDetailInfo> GetSymbolInfoAsync(string filePath, int line, int column)
 		=> new SymbolInfoService(_documentFinder).GetSymbolInfoAsync(filePath, line, column);
 }

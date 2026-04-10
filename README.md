@@ -13,6 +13,7 @@ Unlike standalone Roslyn MCP servers that create their own `MSBuildWorkspace`, t
 | `roslyn_go_to_definition` | Navigate to symbol definition via Roslyn semantic model |
 | `roslyn_get_document_symbols` | List all symbols in a file with types, modifiers, and spans |
 | `roslyn_search_symbols` | Search for symbol declarations across the solution by name |
+| `roslyn_find_dead_code` | Find potentially dead types, methods, and fields across the active workspace, with optional inclusion of public APIs |
 | `roslyn_get_symbol_info` | Get detailed type information, base types, interfaces, parameters |
 
 ## Prerequisites
@@ -65,7 +66,7 @@ Add to your `claude_desktop_config.json`:
 {
   "mcpServers": {
     "roslyn-mcp": {
-      "url": "http://localhost:5050/sse"
+      "url": "http://localhost:5050/mcp"
     }
   }
 }
@@ -79,7 +80,7 @@ Add to your `.vscode/mcp.json` or user settings:
 {
   "servers": {
     "roslyn-mcp": {
-      "url": "http://localhost:5050/sse"
+      "url": "http://localhost:5050/mcp"
     }
   }
 }
@@ -87,7 +88,9 @@ Add to your `.vscode/mcp.json` or user settings:
 
 #### Any MCP Client
 
-Connect to `http://localhost:5050/sse` using HTTP/SSE transport.
+Use **Streamable HTTP** with `http://localhost:5050/mcp` for GitHub Copilot and modern MCP clients.
+
+This server is intentionally configured in **stateless HTTP mode** so reconnects remain reliable across server restarts and solution changes. Legacy SSE endpoints are not required for the Roslyn tools and are not used by the recommended GitHub Copilot setup.
 
 ## Example Prompts
 
@@ -101,6 +104,10 @@ Find all references to the method ProcessOrder in C:\MyProject\src\OrderService.
 
 ```
 Search for all symbols named "Repository" in the current solution
+```
+
+```
+Find dead code in the active workspace and list unused methods, fields, and types
 ```
 
 ## How It Differs from Other Roslyn MCP Servers

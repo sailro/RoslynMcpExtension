@@ -1,5 +1,6 @@
 using System;
 using System.CommandLine;
+using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Builder;
@@ -74,7 +75,13 @@ static async Task RunServerAsync(string pipeName, string host, int port, string 
     await rpcClient.ConnectAsync(pipeName);
     Console.Error.WriteLine("Connected to Visual Studio");
 
-    var builder = WebApplication.CreateBuilder();
+    var serverDirectory = AppContext.BaseDirectory;
+    Directory.SetCurrentDirectory(serverDirectory);
+
+    var builder = WebApplication.CreateBuilder(new WebApplicationOptions
+    {
+        ContentRootPath = serverDirectory
+    });
 
     builder.Logging.SetMinimumLevel(msLogLevel);
     builder.Logging.AddFilter("Microsoft.AspNetCore", LogLevel.Warning);
@@ -83,23 +90,45 @@ static async Task RunServerAsync(string pipeName, string host, int port, string 
     builder.Services.AddSingleton(rpcClient);
 
     builder.Services.AddMcpServer(options =>
-	    {
-		    options.ServerInfo = new Implementation
-		    {
-			    Name = serverName,
-			    Version = "1.0.0"
-		    };
-	    })
-	    .WithHttpTransport()
-	    .WithTools<ValidateFileTool>()
-	    .WithTools<FindReferencesTool>()
-	    .WithTools<GoToDefinitionTool>()
-	    .WithTools<DocumentSymbolsTool>()
-	    .WithTools<SearchSymbolsTool>()
-	    .WithTools<SymbolInfoTool>();
+        {
+            options.ServerInfo = new Implementation
+            {
+                Name = serverName,
+                Version = "1.0.0"
+            };
+        })
+        .WithHttpTransport(options =>
+        {
+            // This server only exposes request/response tools and does not rely on
+            // server-push features, so stateless transport avoids stale session
+            // failures across reconnects and server restarts.
+            options.Stateless = true;
+        })
+        .WithTools<ValidateFileTool>()
+        .WithTools<FindReferencesTool>()
+        .WithTools<GoToDefinitionTool>()
+        .WithTools<DocumentSymbolsTool>()
+        .WithTools<SearchSymbolsTool>()
+        .WithTools<DeadCodeTool>()
+        .WithTools<SymbolInfoTool>();
 
     var app = builder.Build();
-    app.MapMcp();
+
+    app.Use(async (context, next) =>
+    {
+        if (context.Request.Path == "/" || context.Request.Path == "/mcp")
+        {
+            // Some MCP clients keep sending a cached session header even when the
+            // server is stateless. Strip it so reconnects after restarts still work.
+            context.Request.Headers.Remove("Mcp-Session-Id");
+            context.Request.Headers.Remove("mcp-session-id");
+        }
+
+        await next();
+    });
+
+    app.MapMcp("/");
+    app.MapMcp("/mcp");
 
     var bindingUrl = $"http://{host}:{port}";
     app.Urls.Add(bindingUrl);
@@ -108,7 +137,8 @@ static async Task RunServerAsync(string pipeName, string host, int port, string 
     shutdownCts.Token.Register(() => lifetime.StopApplication());
 
     Console.Error.WriteLine($"Roslyn MCP Server listening on {bindingUrl}");
-    Console.Error.WriteLine("Tools: roslyn_validate_file, roslyn_find_references, roslyn_go_to_definition, roslyn_get_document_symbols, roslyn_search_symbols, roslyn_get_symbol_info, roslyn_analyze_complexity");
+    Console.Error.WriteLine($"Streamable HTTP endpoint: {bindingUrl}/mcp (stateless)");
+    Console.Error.WriteLine("Tools: roslyn_validate_file, roslyn_find_references, roslyn_go_to_definition, roslyn_get_document_symbols, roslyn_search_symbols, roslyn_find_dead_code, roslyn_get_symbol_info");
 
     await app.RunAsync();
     Console.Error.WriteLine("Server shutdown complete");
