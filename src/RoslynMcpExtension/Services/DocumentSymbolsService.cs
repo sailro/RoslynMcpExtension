@@ -36,71 +36,8 @@ internal class DocumentSymbolsService(DocumentFinder documentFinder)
 	{
 		foreach (var child in node.ChildNodes())
 		{
-			CodeMemberInfo? symbolInfo = null;
-
-			switch (child)
-			{
-				case NamespaceDeclarationSyntax ns:
-					symbolInfo = CreateSymbolInfo(ns.Name.ToString(), "namespace", child, semanticModel);
-					break;
-				case FileScopedNamespaceDeclarationSyntax ns:
-					symbolInfo = CreateSymbolInfo(ns.Name.ToString(), "namespace", child, semanticModel);
-					break;
-				case ClassDeclarationSyntax cls:
-					symbolInfo = CreateSymbolInfo(cls.Identifier.Text, "class", child, semanticModel);
-					AddModifiers(symbolInfo, cls.Modifiers);
-					break;
-				case StructDeclarationSyntax str:
-					symbolInfo = CreateSymbolInfo(str.Identifier.Text, "struct", child, semanticModel);
-					AddModifiers(symbolInfo, str.Modifiers);
-					break;
-				case InterfaceDeclarationSyntax iface:
-					symbolInfo = CreateSymbolInfo(iface.Identifier.Text, "interface", child, semanticModel);
-					AddModifiers(symbolInfo, iface.Modifiers);
-					break;
-				case EnumDeclarationSyntax enm:
-					symbolInfo = CreateSymbolInfo(enm.Identifier.Text, "enum", child, semanticModel);
-					AddModifiers(symbolInfo, enm.Modifiers);
-					break;
-				case RecordDeclarationSyntax rec:
-					symbolInfo = CreateSymbolInfo(rec.Identifier.Text, "record", child, semanticModel);
-					AddModifiers(symbolInfo, rec.Modifiers);
-					break;
-				case MethodDeclarationSyntax method:
-					symbolInfo = CreateSymbolInfo(method.Identifier.Text, "method", child, semanticModel);
-					symbolInfo.ReturnType = method.ReturnType.ToString();
-					AddModifiers(symbolInfo, method.Modifiers);
-					break;
-				case PropertyDeclarationSyntax prop:
-					symbolInfo = CreateSymbolInfo(prop.Identifier.Text, "property", child, semanticModel);
-					symbolInfo.ReturnType = prop.Type.ToString();
-					AddModifiers(symbolInfo, prop.Modifiers);
-					break;
-				case FieldDeclarationSyntax field:
-					foreach (var variable in field.Declaration.Variables)
-					{
-						var fieldInfo = CreateSymbolInfo(variable.Identifier.Text, "field", child, semanticModel);
-						fieldInfo.ReturnType = field.Declaration.Type.ToString();
-						AddModifiers(fieldInfo, field.Modifiers);
-						symbols.Add(fieldInfo);
-					}
-					continue;
-				case EventDeclarationSyntax evt:
-					symbolInfo = CreateSymbolInfo(evt.Identifier.Text, "event", child, semanticModel);
-					AddModifiers(symbolInfo, evt.Modifiers);
-					break;
-				case ConstructorDeclarationSyntax ctor:
-					symbolInfo = CreateSymbolInfo(ctor.Identifier.Text, "constructor", child, semanticModel);
-					AddModifiers(symbolInfo, ctor.Modifiers);
-					break;
-				case DelegateDeclarationSyntax del:
-					symbolInfo = CreateSymbolInfo(del.Identifier.Text, "delegate", child, semanticModel);
-					symbolInfo.ReturnType = del.ReturnType.ToString();
-					AddModifiers(symbolInfo, del.Modifiers);
-					break;
-			}
-
-			if (symbolInfo != null)
+			var childSymbols = CreateSymbolInfos(child, semanticModel);
+			foreach (var symbolInfo in childSymbols)
 			{
 				CollectSymbols(child, semanticModel, symbolInfo.Children);
 				symbols.Add(symbolInfo);
@@ -108,15 +45,101 @@ internal class DocumentSymbolsService(DocumentFinder documentFinder)
 		}
 	}
 
-	private static CodeMemberInfo CreateSymbolInfo(string name, string memberType, SyntaxNode node, SemanticModel model)
+	private static IEnumerable<CodeMemberInfo> CreateSymbolInfos(SyntaxNode node, SemanticModel semanticModel)
+	{
+		switch (node)
+		{
+			case BaseNamespaceDeclarationSyntax namespaceDeclaration:
+				yield return CreateSymbolInfo(namespaceDeclaration.Name.ToString(), namespaceDeclaration, semanticModel);
+				yield break;
+			case BaseTypeDeclarationSyntax typeDeclaration:
+			{
+				var info = CreateSymbolInfo(GetDeclaredName(typeDeclaration), typeDeclaration, semanticModel);
+				AddModifiers(info, typeDeclaration.Modifiers);
+				yield return info;
+				yield break;
+			}
+			case MethodDeclarationSyntax method:
+			{
+				var info = CreateSymbolInfo(method.Identifier.Text, method, semanticModel);
+				info.ReturnType = method.ReturnType.ToString();
+				AddModifiers(info, method.Modifiers);
+				yield return info;
+				yield break;
+			}
+			case PropertyDeclarationSyntax property:
+			{
+				var info = CreateSymbolInfo(property.Identifier.Text, property, semanticModel);
+				info.ReturnType = property.Type.ToString();
+				AddModifiers(info, property.Modifiers);
+				yield return info;
+				yield break;
+			}
+			case FieldDeclarationSyntax field:
+				foreach (var variable in field.Declaration.Variables)
+				{
+					var info = CreateSymbolInfo(variable.Identifier.Text, variable, semanticModel);
+					info.ReturnType = field.Declaration.Type.ToString();
+					AddModifiers(info, field.Modifiers);
+					yield return info;
+				}
+				yield break;
+			case EventFieldDeclarationSyntax eventField:
+				foreach (var variable in eventField.Declaration.Variables)
+				{
+					var info = CreateSymbolInfo(variable.Identifier.Text, variable, semanticModel);
+					info.ReturnType = eventField.Declaration.Type.ToString();
+					AddModifiers(info, eventField.Modifiers);
+					yield return info;
+				}
+				yield break;
+			case EventDeclarationSyntax eventDeclaration:
+			{
+				var info = CreateSymbolInfo(eventDeclaration.Identifier.Text, eventDeclaration, semanticModel);
+				AddModifiers(info, eventDeclaration.Modifiers);
+				yield return info;
+				yield break;
+			}
+			case ConstructorDeclarationSyntax constructor:
+			{
+				var info = CreateSymbolInfo(constructor.Identifier.Text, constructor, semanticModel);
+				AddModifiers(info, constructor.Modifiers);
+				yield return info;
+				yield break;
+			}
+			case DelegateDeclarationSyntax @delegate:
+			{
+				var info = CreateSymbolInfo(@delegate.Identifier.Text, @delegate, semanticModel);
+				info.ReturnType = @delegate.ReturnType.ToString();
+				AddModifiers(info, @delegate.Modifiers);
+				yield return info;
+				yield break;
+			}
+		}
+	}
+
+	private static CodeMemberInfo CreateSymbolInfo(string name, SyntaxNode node, SemanticModel model)
 	{
 		var declaredSymbol = model.GetDeclaredSymbol(node);
 		return CodeMemberInfoFactory.Create(
 			declaredSymbol,
 			name,
-			memberType,
+			"member",
 			node.GetLocation(),
 			model.Compilation.AssemblyName);
+	}
+
+	private static string GetDeclaredName(BaseTypeDeclarationSyntax typeDeclaration)
+	{
+		return typeDeclaration switch
+		{
+			ClassDeclarationSyntax cls => cls.Identifier.Text,
+			StructDeclarationSyntax str => str.Identifier.Text,
+			InterfaceDeclarationSyntax iface => iface.Identifier.Text,
+			EnumDeclarationSyntax enm => enm.Identifier.Text,
+			RecordDeclarationSyntax rec => rec.Identifier.Text,
+			_ => typeDeclaration.GetType().Name
+		};
 	}
 
 	private static void AddModifiers(CodeMemberInfo info, SyntaxTokenList modifiers)

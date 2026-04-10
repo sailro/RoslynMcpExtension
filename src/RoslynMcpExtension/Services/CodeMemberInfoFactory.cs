@@ -68,6 +68,9 @@ internal static class CodeMemberInfoFactory
             case IPropertySymbol propertySymbol:
                 info.ReturnType = propertySymbol.Type.ToDisplayString();
                 break;
+            case IEventSymbol eventSymbol:
+                info.ReturnType = eventSymbol.Type.ToDisplayString();
+                break;
             case IFieldSymbol fieldSymbol:
                 info.ReturnType = fieldSymbol.Type.ToDisplayString();
                 break;
