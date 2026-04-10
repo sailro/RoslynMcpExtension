@@ -116,7 +116,7 @@ static async Task RunServerAsync(string pipeName, string host, int port, string 
 
     app.Use(async (context, next) =>
     {
-        if (context.Request.Path == "/" || context.Request.Path == "/mcp")
+        if (context.Request.Path == "/" || context.Request.Path.StartsWithSegments("/mcp"))
         {
             // Some MCP clients keep sending a cached session header even when the
             // server is stateless. Strip it so reconnects after restarts still work.

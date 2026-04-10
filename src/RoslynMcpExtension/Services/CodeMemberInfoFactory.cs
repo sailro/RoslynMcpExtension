@@ -34,7 +34,8 @@ internal static class CodeMemberInfoFactory
         if (symbol == null)
             return info;
 
-        info.Name = symbol.Name;
+        if (string.IsNullOrWhiteSpace(info.Name))
+            info.Name = symbol.Name;
         info.FullName = symbol.ToDisplayString();
         info.MemberType = GetMemberType(symbol);
         info.ContainingType = symbol.ContainingType?.ToDisplayString();
