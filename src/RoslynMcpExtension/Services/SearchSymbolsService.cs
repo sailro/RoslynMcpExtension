@@ -20,7 +20,7 @@ internal class SearchSymbolsService(DocumentFinder documentFinder)
 
 			foreach (var project in solution.Projects)
 			{
-				if (result.Symbols.Count >= maxResults) break;
+				if (result.Members.Count >= maxResults) break;
 
 				var symbols = await SymbolFinder.FindDeclarationsAsync(
 					project, query, ignoreCase: true,
@@ -29,30 +29,23 @@ internal class SearchSymbolsService(DocumentFinder documentFinder)
 
 				foreach (var symbol in symbols)
 				{
-					if (result.Symbols.Count >= maxResults) break;
+					if (result.Members.Count >= maxResults) break;
 					if (symbol.Locations.Length == 0) continue;
 
 					var loc = symbol.Locations.FirstOrDefault(l => l.IsInSource);
 					if (loc == null) continue;
 
-					var lineSpan = loc.GetLineSpan();
-					result.Symbols.Add(new SymbolSearchInfo
-					{
-						Name = symbol.Name,
-						FullName = symbol.ToDisplayString(),
-						Kind = symbol.Kind.ToString(),
-						FilePath = loc.SourceTree?.FilePath ?? string.Empty,
-						StartLine = lineSpan.StartLinePosition.Line + 1,
-						StartColumn = lineSpan.StartLinePosition.Character + 1,
-						ProjectName = project.Name,
-						ContainingType = symbol.ContainingType?.ToDisplayString(),
-						ContainingNamespace = symbol.ContainingNamespace?.ToDisplayString()
-					});
+					result.Members.Add(CodeMemberInfoFactory.Create(
+						symbol,
+						symbol.Name,
+						"member",
+						loc,
+						project.Name));
 				}
 			}
 
-			result.TotalCount = result.Symbols.Count;
-			result.Truncated = result.Symbols.Count >= maxResults;
+			result.TotalCount = result.Members.Count;
+			result.Truncated = result.Members.Count >= maxResults;
 		}
 		catch (Exception ex)
 		{

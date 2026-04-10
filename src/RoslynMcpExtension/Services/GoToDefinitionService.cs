@@ -38,10 +38,11 @@ internal class GoToDefinitionService(DocumentFinder documentFinder)
 			}
 
 			result.Found = true;
-			result.SymbolName = symbol.Name;
-			result.SymbolKind = symbol.Kind.ToString();
-			result.ContainingType = symbol.ContainingType?.ToDisplayString();
-			result.ContainingNamespace = symbol.ContainingNamespace?.ToDisplayString();
+			result.Member = CodeMemberInfoFactory.Create(
+				symbol,
+				symbol.Name,
+				"member",
+				symbol.Locations.FirstOrDefault(l => l.IsInSource));
 
 			foreach (var loc in symbol.Locations)
 			{

@@ -9,9 +9,9 @@ namespace RoslynMcpExtension.Services;
 
 internal class SymbolInfoService(DocumentFinder documentFinder)
 {
-	public async Task<SymbolDetailInfo> GetSymbolInfoAsync(string filePath, int line, int column)
+	public async Task<MemberLookupResult> GetSymbolInfoAsync(string filePath, int line, int column)
 	{
-		var result = new SymbolDetailInfo();
+		var result = new MemberLookupResult();
 
 		try
 		{
@@ -39,50 +39,8 @@ internal class SymbolInfoService(DocumentFinder documentFinder)
 			}
 
 			result.Found = true;
-			result.Name = symbol.Name;
-			result.FullName = symbol.ToDisplayString();
-			result.Kind = symbol.Kind.ToString();
-			result.Accessibility = symbol.DeclaredAccessibility.ToString();
-			result.IsStatic = symbol.IsStatic;
-			result.IsAbstract = symbol.IsAbstract;
-			result.IsVirtual = symbol.IsVirtual;
-			result.IsOverride = symbol.IsOverride;
-			result.IsSealed = symbol.IsSealed;
-			result.ContainingType = symbol.ContainingType?.ToDisplayString();
-			result.ContainingNamespace = symbol.ContainingNamespace?.ToDisplayString();
-			result.Documentation = symbol.GetDocumentationCommentXml();
-
-			switch (symbol)
-			{
-				case INamedTypeSymbol typeSymbol:
-					result.TypeName = typeSymbol.TypeKind.ToString();
-					if (typeSymbol.BaseType != null)
-						result.BaseTypes.Add(typeSymbol.BaseType.ToDisplayString());
-					result.Interfaces = [.. typeSymbol.Interfaces.Select(i => i.ToDisplayString())];
-					break;
-				case IMethodSymbol methodSymbol:
-					result.ReturnType = methodSymbol.ReturnType.ToDisplayString();
-					result.Parameters = [.. methodSymbol.Parameters.Select(p => new ParameterInfo
-					{
-						Name = p.Name,
-						Type = p.Type.ToDisplayString(),
-						IsOptional = p.IsOptional,
-						DefaultValue = p.HasExplicitDefaultValue ? p.ExplicitDefaultValue?.ToString() : null
-					})];
-					break;
-				case IPropertySymbol propSymbol:
-					result.ReturnType = propSymbol.Type.ToDisplayString();
-					break;
-				case IFieldSymbol fieldSymbol:
-					result.ReturnType = fieldSymbol.Type.ToDisplayString();
-					break;
-				case ILocalSymbol localSymbol:
-					result.ReturnType = localSymbol.Type.ToDisplayString();
-					break;
-				case IParameterSymbol paramSymbol:
-					result.ReturnType = paramSymbol.Type.ToDisplayString();
-					break;
-			}
+			var location = symbol.Locations.FirstOrDefault(l => l.IsInSource);
+			result.Member = CodeMemberInfoFactory.Create(symbol, symbol.Name, "member", location);
 		}
 		catch (Exception ex)
 		{

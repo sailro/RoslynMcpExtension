@@ -31,14 +31,11 @@ public class DiagnosticInfo : SourceLocationInfo
 }
 
 public class FindReferencesResult
+    : MemberLookupResult
 {
-    public bool Found { get; set; }
-    public string SymbolName { get; set; } = string.Empty;
-    public string SymbolKind { get; set; } = string.Empty;
     public List<ReferenceLocationInfo> References { get; set; } = [];
     public int TotalCount { get; set; }
     public bool Truncated { get; set; }
-    public string? ErrorMessage { get; set; }
 }
 
 public class ReferenceLocationInfo : SourceLocationInfo
@@ -49,14 +46,9 @@ public class ReferenceLocationInfo : SourceLocationInfo
 }
 
 public class GoToDefinitionResult
+    : MemberLookupResult
 {
-    public bool Found { get; set; }
-    public string SymbolName { get; set; } = string.Empty;
-    public string SymbolKind { get; set; } = string.Empty;
-    public string? ContainingType { get; set; }
-    public string? ContainingNamespace { get; set; }
     public List<DefinitionLocationInfo> Definitions { get; set; } = [];
-    public string? ErrorMessage { get; set; }
 }
 
 public class DefinitionLocationInfo : SourceLocationInfo
@@ -66,61 +58,51 @@ public class DefinitionLocationInfo : SourceLocationInfo
     public string? AssemblyName { get; set; }
 }
 
-public class SearchSymbolsResult
+public class MemberQueryResult
 {
-    public List<SymbolSearchInfo> Symbols { get; set; } = [];
+    public List<CodeMemberInfo> Members { get; set; } = [];
     public int TotalCount { get; set; }
     public bool Truncated { get; set; }
     public string? ErrorMessage { get; set; }
 }
 
-public class DeadCodeAnalysisResult
+public class MemberLookupResult
 {
-    public List<SymbolSearchInfo> Members { get; set; } = [];
-    public int TotalCount { get; set; }
-    public bool Truncated { get; set; }
+    public bool Found { get; set; }
+    public CodeMemberInfo? Member { get; set; }
     public string? ErrorMessage { get; set; }
 }
 
-public class SymbolSearchInfo : SourceLocationInfo
+public class SearchSymbolsResult : MemberQueryResult
+{
+}
+
+public class DeadCodeAnalysisResult : MemberQueryResult
+{
+}
+
+public class CodeMemberInfo : SourceLocationInfo
 {
     public string Name { get; set; } = string.Empty;
     public string FullName { get; set; } = string.Empty;
-    public string Kind { get; set; } = string.Empty;
+    public string MemberType { get; set; } = string.Empty;
     public string? ProjectName { get; set; }
     public string? ContainingType { get; set; }
     public string? ContainingNamespace { get; set; }
-}
-
-public class DocumentSymbolInfo : SymbolSearchInfo
-{
     public string? ReturnType { get; set; }
-    public string Accessibility { get; set; } = string.Empty;
-    public List<string> Modifiers { get; set; } = [];
-    public List<DocumentSymbolInfo> Children { get; set; } = [];
-}
-
-public class SymbolDetailInfo
-{
-    public bool Found { get; set; }
-    public string Name { get; set; } = string.Empty;
-    public string FullName { get; set; } = string.Empty;
-    public string Kind { get; set; } = string.Empty;
     public string? TypeName { get; set; }
-    public string? ReturnType { get; set; }
     public string Accessibility { get; set; } = string.Empty;
     public bool IsStatic { get; set; }
     public bool IsAbstract { get; set; }
     public bool IsVirtual { get; set; }
     public bool IsOverride { get; set; }
     public bool IsSealed { get; set; }
-    public string? ContainingType { get; set; }
-    public string? ContainingNamespace { get; set; }
+    public List<string> Modifiers { get; set; } = [];
     public List<string> BaseTypes { get; set; } = [];
     public List<string> Interfaces { get; set; } = [];
     public List<ParameterInfo> Parameters { get; set; } = [];
     public string? Documentation { get; set; }
-    public string? ErrorMessage { get; set; }
+    public List<CodeMemberInfo> Children { get; set; } = [];
 }
 
 public class ParameterInfo

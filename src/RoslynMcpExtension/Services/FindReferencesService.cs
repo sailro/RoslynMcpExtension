@@ -37,9 +37,12 @@ internal class FindReferencesService(DocumentFinder documentFinder)
 				return result;
 			}
 
-			result.SymbolName = symbol.Name;
-			result.SymbolKind = symbol.Kind.ToString();
 			result.Found = true;
+			result.Member = CodeMemberInfoFactory.Create(
+				symbol,
+				symbol.Name,
+				"member",
+				symbol.Locations.FirstOrDefault(l => l.IsInSource));
 
 			var references = await SymbolFinder.FindReferencesAsync(symbol, documentFinder.Workspace.CurrentSolution);
 			var count = 0;

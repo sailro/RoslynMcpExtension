@@ -19,15 +19,15 @@ public sealed class SearchSymbolsTool(RpcClient rpc)
         if (result.ErrorMessage != null)
             return $"Error: {result.ErrorMessage}";
 
-        if (result.Symbols.Count == 0)
+        if (result.Members.Count == 0)
             return $"No symbols found matching '{query}'.";
 
         var sb = new StringBuilder();
         sb.AppendLine($"Search results for '{query}' ({result.TotalCount}{(result.Truncated ? " truncated" : "")}):");
 
-        foreach (var s in result.Symbols)
+        foreach (var s in result.Members)
         {
-            sb.AppendLine($"  {s.Kind} {s.FullName}");
+            sb.AppendLine($"  {s.MemberType} {s.FullName}");
             sb.AppendLine($"    {s.FilePath}:{s.StartLine}:{s.StartColumn}");
         }
 

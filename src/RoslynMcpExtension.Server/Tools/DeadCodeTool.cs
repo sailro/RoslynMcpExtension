@@ -30,7 +30,7 @@ public sealed class DeadCodeTool(RpcClient rpc)
 		{
 			sb.AppendLine();
 			sb.AppendLine($"- FullName: {member.FullName}");
-			sb.AppendLine($"  MemberType: {member.Kind}");
+			sb.AppendLine($"  MemberType: {member.MemberType}");
 			sb.AppendLine($"  FilePath: {member.FilePath}");
 			sb.AppendLine($"  Location: {member.StartLine}:{member.StartColumn}");
 			sb.AppendLine($"  Project: {member.ProjectName}");

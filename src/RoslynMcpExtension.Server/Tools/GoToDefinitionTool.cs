@@ -21,12 +21,13 @@ public sealed class GoToDefinitionTool(RpcClient rpc)
             return $"Error: {result.ErrorMessage}";
 
         var sb = new StringBuilder();
-        sb.AppendLine($"Symbol: {result.SymbolName} ({result.SymbolKind})");
+        if (result.Member != null)
+            sb.AppendLine($"Symbol: {result.Member.FullName} ({result.Member.MemberType})");
 
-        if (result.ContainingType != null)
-            sb.AppendLine($"Containing type: {result.ContainingType}");
-        if (result.ContainingNamespace != null)
-            sb.AppendLine($"Namespace: {result.ContainingNamespace}");
+        if (result.Member?.ContainingType != null)
+            sb.AppendLine($"Containing type: {result.Member.ContainingType}");
+        if (result.Member?.ContainingNamespace != null)
+            sb.AppendLine($"Namespace: {result.Member.ContainingNamespace}");
 
         sb.AppendLine($"\nDefinitions ({result.Definitions.Count}):");
         foreach (var d in result.Definitions)

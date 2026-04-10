@@ -63,7 +63,7 @@ public sealed class RpcClient(CancellationTokenSource shutdownCts) : IRoslynAnal
     public Task<GoToDefinitionResult> GoToDefinitionAsync(string filePath, int line, int column)
         => Proxy.GoToDefinitionAsync(filePath, line, column);
 
-    public Task<List<DocumentSymbolInfo>> GetDocumentSymbolsAsync(string filePath)
+    public Task<List<CodeMemberInfo>> GetDocumentSymbolsAsync(string filePath)
         => Proxy.GetDocumentSymbolsAsync(filePath);
 
     public Task<SearchSymbolsResult> SearchSymbolsAsync(string query, int maxResults)
@@ -72,6 +72,6 @@ public sealed class RpcClient(CancellationTokenSource shutdownCts) : IRoslynAnal
     public Task<DeadCodeAnalysisResult> FindDeadCodeAsync(int maxResults, bool includeInternal, bool includePublic)
         => Proxy.FindDeadCodeAsync(maxResults, includeInternal, includePublic);
 
-    public Task<SymbolDetailInfo> GetSymbolInfoAsync(string filePath, int line, int column)
+    public Task<MemberLookupResult> GetSymbolInfoAsync(string filePath, int line, int column)
         => Proxy.GetSymbolInfoAsync(filePath, line, column);
 }

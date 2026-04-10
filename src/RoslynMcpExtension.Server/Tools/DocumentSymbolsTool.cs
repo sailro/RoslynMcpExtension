@@ -24,14 +24,14 @@ public sealed class DocumentSymbolsTool(RpcClient rpc)
         return sb.ToString();
     }
 
-    private static void FormatSymbols(System.Collections.Generic.List<DocumentSymbolInfo> symbols, StringBuilder sb, int indent)
+    private static void FormatSymbols(System.Collections.Generic.List<CodeMemberInfo> symbols, StringBuilder sb, int indent)
     {
         var prefix = new string(' ', indent * 2);
         foreach (var s in symbols)
         {
             var modifiers = s.Modifiers.Count > 0 ? $" [{string.Join(", ", s.Modifiers)}]" : "";
             var returnType = s.ReturnType != null ? $" : {s.ReturnType}" : "";
-            sb.AppendLine($"{prefix}{s.Kind} {s.Name}{returnType}{modifiers} ({s.Accessibility}) [{s.StartLine}-{s.EndLine}]");
+            sb.AppendLine($"{prefix}{s.MemberType} {s.Name}{returnType}{modifiers} ({s.Accessibility}) [{s.StartLine}-{s.EndLine}]");
 
             if (s.Children.Count > 0)
                 FormatSymbols(s.Children, sb, indent + 1);

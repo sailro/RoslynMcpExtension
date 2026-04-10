@@ -22,7 +22,8 @@ public sealed class FindReferencesTool(RpcClient rpc)
             return $"Error: {result.ErrorMessage}";
 
         var sb = new StringBuilder();
-        sb.AppendLine($"Symbol: {result.SymbolName} ({result.SymbolKind})");
+        if (result.Member != null)
+            sb.AppendLine($"Symbol: {result.Member.FullName} ({result.Member.MemberType})");
         sb.AppendLine($"References found: {result.TotalCount}{(result.Truncated ? " (truncated)" : "")}");
 
         foreach (var r in result.References)

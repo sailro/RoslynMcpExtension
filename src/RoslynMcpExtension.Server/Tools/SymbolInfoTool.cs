@@ -21,22 +21,26 @@ public sealed class SymbolInfoTool(RpcClient rpc)
         if (result.ErrorMessage != null)
             return $"Error: {result.ErrorMessage}";
 
-        var sb = new StringBuilder();
-        sb.AppendLine($"Symbol: {result.FullName}");
-        sb.AppendLine($"Kind: {result.Kind}");
-        sb.AppendLine($"Accessibility: {result.Accessibility}");
+        if (!result.Found || result.Member == null)
+            return "No symbol information available.";
 
-        if (result.TypeName != null)
-            sb.AppendLine($"Type kind: {result.TypeName}");
-        if (result.ReturnType != null)
-            sb.AppendLine($"Return/Type: {result.ReturnType}");
+        var member = result.Member;
+        var sb = new StringBuilder();
+        sb.AppendLine($"Symbol: {member.FullName}");
+        sb.AppendLine($"Member type: {member.MemberType}");
+        sb.AppendLine($"Accessibility: {member.Accessibility}");
+
+        if (member.TypeName != null)
+            sb.AppendLine($"Type kind: {member.TypeName}");
+        if (member.ReturnType != null)
+            sb.AppendLine($"Return/Type: {member.ReturnType}");
 
         var flags = new[] {
-            result.IsStatic ? "static" : null,
-            result.IsAbstract ? "abstract" : null,
-            result.IsVirtual ? "virtual" : null,
-            result.IsOverride ? "override" : null,
-            result.IsSealed ? "sealed" : null
+            member.IsStatic ? "static" : null,
+            member.IsAbstract ? "abstract" : null,
+            member.IsVirtual ? "virtual" : null,
+            member.IsOverride ? "override" : null,
+            member.IsSealed ? "sealed" : null
         }
 	        .Where(f => f != null)
 	        .ToArray();
@@ -44,28 +48,28 @@ public sealed class SymbolInfoTool(RpcClient rpc)
         if (flags.Length != 0)
             sb.AppendLine($"Modifiers: {string.Join(", ", flags)}");
 
-        if (result.ContainingType != null)
-            sb.AppendLine($"Containing type: {result.ContainingType}");
-        if (result.ContainingNamespace != null)
-            sb.AppendLine($"Namespace: {result.ContainingNamespace}");
+        if (member.ContainingType != null)
+            sb.AppendLine($"Containing type: {member.ContainingType}");
+        if (member.ContainingNamespace != null)
+            sb.AppendLine($"Namespace: {member.ContainingNamespace}");
 
-        if (result.BaseTypes.Count > 0)
-            sb.AppendLine($"Base types: {string.Join(", ", result.BaseTypes)}");
-        if (result.Interfaces.Count > 0)
-            sb.AppendLine($"Interfaces: {string.Join(", ", result.Interfaces)}");
+        if (member.BaseTypes.Count > 0)
+            sb.AppendLine($"Base types: {string.Join(", ", member.BaseTypes)}");
+        if (member.Interfaces.Count > 0)
+            sb.AppendLine($"Interfaces: {string.Join(", ", member.Interfaces)}");
 
-        if (result.Parameters.Count > 0)
+        if (member.Parameters.Count > 0)
         {
             sb.AppendLine("Parameters:");
-            foreach (var p in result.Parameters)
+            foreach (var p in member.Parameters)
             {
                 var opt = p.IsOptional ? $" = {p.DefaultValue ?? "default"}" : "";
                 sb.AppendLine($"  {p.Type} {p.Name}{opt}");
             }
         }
 
-        if (!string.IsNullOrWhiteSpace(result.Documentation))
-            sb.AppendLine($"\nDocumentation:\n{result.Documentation}");
+        if (!string.IsNullOrWhiteSpace(member.Documentation))
+            sb.AppendLine($"\nDocumentation:\n{member.Documentation}");
 
         return sb.ToString();
     }

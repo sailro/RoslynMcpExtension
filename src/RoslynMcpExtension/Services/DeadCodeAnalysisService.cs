@@ -36,19 +36,12 @@ internal class DeadCodeAnalysisService(DocumentFinder documentFinder)
 				if (result.Members.Count >= maxResults)
 					continue;
 
-				var lineSpan = candidate.Location.GetLineSpan();
-				result.Members.Add(new SymbolSearchInfo
-				{
-					Name = candidate.Symbol.Name,
-					FullName = candidate.Symbol.ToDisplayString(),
-					Kind = GetMemberType(candidate.Symbol),
-					FilePath = candidate.Location.SourceTree?.FilePath ?? string.Empty,
-					StartLine = lineSpan.StartLinePosition.Line + 1,
-					StartColumn = lineSpan.StartLinePosition.Character + 1,
-					ProjectName = candidate.ProjectName,
-					ContainingType = candidate.Symbol.ContainingType?.ToDisplayString(),
-					ContainingNamespace = candidate.Symbol.ContainingNamespace?.ToDisplayString()
-				});
+				result.Members.Add(CodeMemberInfoFactory.Create(
+					candidate.Symbol,
+					candidate.Symbol.Name,
+					GetMemberType(candidate.Symbol),
+					candidate.Location,
+					candidate.ProjectName));
 			}
 
 			result.TotalCount = deadCount;
@@ -221,13 +214,7 @@ internal class DeadCodeAnalysisService(DocumentFinder documentFinder)
 
 	private static string GetMemberType(ISymbol symbol)
 	{
-		return symbol switch
-		{
-			IMethodSymbol => "method",
-			IFieldSymbol => "field",
-			INamedTypeSymbol => "type",
-			_ => symbol.Kind.ToString().ToLowerInvariant()
-		};
+		return CodeMemberInfoFactory.GetMemberType(symbol);
 	}
 
 	private sealed class CandidateSymbol(ISymbol symbol, string projectName, Location location)
