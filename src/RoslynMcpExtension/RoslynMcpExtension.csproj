@@ -2,8 +2,6 @@
 
   <PropertyGroup>
     <TargetFramework>net48</TargetFramework>
-    <LangVersion>latest</LangVersion>
-    <Nullable>enable</Nullable>
     <RootNamespace>RoslynMcpExtension</RootNamespace>
     <AssemblyName>RoslynMcpExtension</AssemblyName>
     <GeneratePkgDefFile>true</GeneratePkgDefFile>
@@ -25,14 +23,14 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Community.VisualStudio.Toolkit.17" Version="17.0.549" />
-    <PackageReference Include="Microsoft.VSSDK.BuildTools" Version="17.14.2120">
+    <PackageReference Include="Community.VisualStudio.Toolkit.17" />
+    <PackageReference Include="Microsoft.VSSDK.BuildTools">
       <IncludeAssets>build; runtime</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="Microsoft.VisualStudio.SDK" Version="17.14.40265" />
-    <PackageReference Include="Microsoft.VisualStudio.LanguageServices" Version="4.14.0" />
-    <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="4.14.0" />
-    <PackageReference Include="StreamJsonRpc" Version="2.24.84" />
+    <PackageReference Include="Microsoft.VisualStudio.SDK" />
+    <PackageReference Include="Microsoft.VisualStudio.LanguageServices" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" />
+    <PackageReference Include="StreamJsonRpc" ExcludeAssets="runtime" PrivateAssets="all" />
   </ItemGroup>
 
   <ItemGroup>

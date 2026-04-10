@@ -1,11 +1,8 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using PolyType;
-using StreamJsonRpc;
 
 namespace RoslynMcpExtension.Shared;
 
-[JsonRpcContract, GenerateShape(IncludeMethods = MethodShapeFlags.PublicInstance)]
 public partial interface IRoslynAnalysisRpc
 {
     Task<ValidateFileResult> ValidateFileAsync(string filePath, bool includeWarnings, bool runAnalyzers);

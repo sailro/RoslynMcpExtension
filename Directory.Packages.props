@@ -1,0 +1,17 @@
+<Project>
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageVersion Include="Community.VisualStudio.Toolkit.17" Version="17.0.549" />
+    <PackageVersion Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="4.14.0" />
+    <PackageVersion Include="Microsoft.VisualStudio.LanguageServices" Version="4.14.0" />
+    <PackageVersion Include="Microsoft.VisualStudio.SDK" Version="17.14.40265" />
+    <PackageVersion Include="Microsoft.VSSDK.BuildTools" Version="17.14.2120" />
+    <PackageVersion Include="ModelContextProtocol.AspNetCore" Version="0.8.0-preview.1" />
+    <!-- VS2022 provides StreamJsonRpc 2.22 at runtime; the standalone net10 server overrides to 2.24.84. -->
+    <PackageVersion Include="StreamJsonRpc" Version="[2.22.23]" />
+    <PackageVersion Include="System.CommandLine" Version="2.0.3" />
+  </ItemGroup>
+</Project>

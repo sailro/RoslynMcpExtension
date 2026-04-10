@@ -3,15 +3,13 @@
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <OutputType>Exe</OutputType>
-    <LangVersion>latest</LangVersion>
-    <Nullable>enable</Nullable>
     <RootNamespace>RoslynMcpExtension.Server</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="ModelContextProtocol.AspNetCore" Version="0.8.0-preview.1" />
-    <PackageReference Include="StreamJsonRpc" Version="2.24.84" />
-    <PackageReference Include="System.CommandLine" Version="2.0.3" />
+    <PackageReference Include="ModelContextProtocol.AspNetCore" />
+    <PackageReference Include="StreamJsonRpc" VersionOverride="[2.24.84]" />
+    <PackageReference Include="System.CommandLine" />
   </ItemGroup>
 
   <ItemGroup>
