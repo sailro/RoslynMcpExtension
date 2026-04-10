@@ -92,6 +92,21 @@ Use **Streamable HTTP** with `http://localhost:5050/mcp` for GitHub Copilot and 
 
 This server is intentionally configured in **stateless HTTP mode** so reconnects remain reliable across server restarts and solution changes. Legacy SSE endpoints are not required for the Roslyn tools and are not used by the recommended GitHub Copilot setup.
 
+### Dead Code Analysis
+
+`roslyn_find_dead_code` reports **potentially** unused methods, fields, and types from the live Visual Studio workspace. It uses Roslyn semantic references plus additional heuristics for framework-driven and runtime-driven code paths that do not always appear as normal source references.
+
+The analysis is intentionally conservative and already filters several common false-positive patterns:
+
+- **Test code**: xUnit, NUnit, and MSTest attributes such as `Fact`, `Theory`, `Test`, `TestCase`, `TestMethod`, `DataTestMethod`, setup/cleanup attributes, and types that contain or inherit test methods
+- **Interface contracts**: both explicit and implicit interface implementations
+- **XAML usage**: event handlers, code-behind types, and parameterless constructors for controls and windows instantiated from `.xaml`
+- **Visual Studio / MEF composition**: `Export`, `Import`, `ImportingConstructor`, and Visual Studio package types decorated with `PackageRegistrationAttribute`
+- **Generated and interop code**: common generated files, compiler-generated members, and marshaling / `StructLayout` fields
+- **Extension patterns**: static extension containers, classic `this` extension methods, and newer C# `extension(...) { }` blocks
+
+Dead-code detection can never be perfect, especially for reflection-heavy or externally activated code, so results should still be reviewed before deletion.
+
 ## Example Prompts
 
 ```
@@ -108,6 +123,10 @@ Search for all symbols named "Repository" in the current solution
 
 ```
 Find dead code in the active workspace and list unused methods, fields, and types
+```
+
+```
+Find dead code in the active workspace and include public members as well
 ```
 
 ## How It Differs from Other Roslyn MCP Servers
