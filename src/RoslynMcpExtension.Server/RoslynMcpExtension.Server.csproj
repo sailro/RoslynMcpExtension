@@ -4,6 +4,7 @@
     <TargetFramework>net10.0</TargetFramework>
     <OutputType>Exe</OutputType>
     <RootNamespace>RoslynMcpExtension.Server</RootNamespace>
+    <NoWarn>$(NoWarn);StreamJsonRpc0003</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
