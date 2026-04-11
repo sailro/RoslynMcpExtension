@@ -36,6 +36,7 @@ internal static class CodeMemberInfoFactory
 
         if (string.IsNullOrWhiteSpace(info.Name))
             info.Name = symbol.Name;
+
         info.FullName = symbol.ToDisplayString();
         info.MemberType = GetMemberType(symbol);
         info.ContainingType = symbol.ContainingType?.ToDisplayString();
@@ -91,7 +92,7 @@ internal static class CodeMemberInfoFactory
         return symbol switch
         {
             INamespaceSymbol => "namespace",
-            INamedTypeSymbol typeSymbol when typeSymbol.IsRecord => "record",
+            INamedTypeSymbol { IsRecord: true } => "record",
             INamedTypeSymbol typeSymbol => typeSymbol.TypeKind switch
             {
                 TypeKind.Class => "class",
@@ -101,7 +102,7 @@ internal static class CodeMemberInfoFactory
                 TypeKind.Delegate => "delegate",
                 _ => "type"
             },
-            IMethodSymbol methodSymbol when methodSymbol.MethodKind == MethodKind.Constructor => "constructor",
+            IMethodSymbol { MethodKind: MethodKind.Constructor } => "constructor",
             IMethodSymbol => "method",
             IPropertySymbol => "property",
             IFieldSymbol => "field",

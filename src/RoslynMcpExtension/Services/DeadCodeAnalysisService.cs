@@ -17,41 +17,22 @@ internal class DeadCodeAnalysisService(DocumentFinder documentFinder)
 	private static readonly string[] TestMethodAttributeNames =
 	[
 		// xUnit
-		"FactAttribute",
-		"TheoryAttribute",
-		"InlineDataAttribute",
-		"MemberDataAttribute",
-		"ClassDataAttribute",
+		"FactAttribute", "TheoryAttribute", "InlineDataAttribute", "MemberDataAttribute", "ClassDataAttribute",
 
 		// NUnit
-		"TestAttribute",
-		"TestCaseAttribute",
-		"TestCaseSourceAttribute",
-		"ValuesAttribute",
-		"ValueSourceAttribute",
-		"RangeAttribute",
-		"RandomAttribute",
-		"CombinatorialAttribute",
-		"PairwiseAttribute",
-		"SequentialAttribute",
-		"DatapointAttribute",
-		"DatapointSourceAttribute",
-		"SetUpAttribute",
-		"TearDownAttribute",
-		"OneTimeSetUpAttribute",
-		"OneTimeTearDownAttribute",
+		"TestAttribute", "TestCaseAttribute", "TestCaseSourceAttribute",
+		"ValuesAttribute", "ValueSourceAttribute", "RangeAttribute",
+		"RandomAttribute", "CombinatorialAttribute", "PairwiseAttribute", "SequentialAttribute",
+		"DatapointAttribute", "DatapointSourceAttribute",
+		"SetUpAttribute", "TearDownAttribute", "OneTimeSetUpAttribute", "OneTimeTearDownAttribute",
 
 		// MSTest
 		"TestMethodAttribute",
-		"DataTestMethodAttribute",
-		"DataRowAttribute",
+		"DataTestMethodAttribute", "DataRowAttribute",
 		"DynamicDataAttribute",
-		"TestInitializeAttribute",
-		"TestCleanupAttribute",
-		"ClassInitializeAttribute",
-		"ClassCleanupAttribute",
-		"AssemblyInitializeAttribute",
-		"AssemblyCleanupAttribute"
+		"TestInitializeAttribute", "TestCleanupAttribute",
+		"ClassInitializeAttribute", "ClassCleanupAttribute",
+		"AssemblyInitializeAttribute", "AssemblyCleanupAttribute"
 	];
 
 	private static readonly string[] TestContainerAttributeNames =
@@ -239,11 +220,7 @@ internal class DeadCodeAnalysisService(DocumentFinder documentFinder)
 			return false;
 
 		return method.AssociatedSymbol == null
-		       && !method.IsAbstract
-		       && !method.IsOverride
-		       && !method.IsVirtual
-		       && !method.IsExtern
-		       && method.ExplicitInterfaceImplementations.Length == 0;
+		       && method is { IsAbstract: false, IsOverride: false, IsVirtual: false, IsExtern: false, ExplicitInterfaceImplementations.Length: 0 };
 	}
 
 	private static bool IsCandidate(IFieldSymbol field)
@@ -261,8 +238,7 @@ internal class DeadCodeAnalysisService(DocumentFinder documentFinder)
 	private static bool IsCandidate(INamedTypeSymbol type)
 	{
 		return type.TypeKind != TypeKind.Error
-		       && !type.IsAnonymousType
-		       && !type.IsImplicitClass
+		       && type is { IsAnonymousType: false, IsImplicitClass: false }
 		       && !IsWithinTestContainer(type)
 		       && !HasGeneratedCodeAttributes(type)
 		       && !HasFrameworkCompositionAttributes(type)
@@ -299,9 +275,7 @@ internal class DeadCodeAnalysisService(DocumentFinder documentFinder)
 			if (xamlReferences.ReferencesMember(method))
 				return true;
 
-			if (method.MethodKind == MethodKind.Constructor
-			    && method.Parameters.Length == 0
-			    && method.ContainingType != null
+			if (method is { MethodKind: MethodKind.Constructor, Parameters.Length: 0, ContainingType: not null }
 			    && (IsLikelyFrameworkActivatedType(method.ContainingType)
 			        || await xamlReferences.ReferencesTypeOrDerivedTypeAsync(method.ContainingType, solution)
 			        || await derivedTypeReferenceIndex.HasReferencedDerivedTypeAsync(method.ContainingType)))
@@ -313,15 +287,14 @@ internal class DeadCodeAnalysisService(DocumentFinder documentFinder)
 		if (symbol is INamedTypeSymbol type && xamlReferences.ReferencesType(type))
 			return true;
 
-		if (symbol is IFieldSymbol field)
-		{
-			if (xamlReferences.ReferencesMember(field))
-				return true;
+		if (symbol is not IFieldSymbol field) 
+			return false;
 
-			return await HasSameDocumentReferenceAsync(field, solution);
-		}
+		if (xamlReferences.ReferencesMember(field))
+			return true;
 
-		return false;
+		return await HasSameDocumentReferenceAsync(field, solution);
+
 	}
 
 	private static string GetMemberType(ISymbol symbol)
@@ -552,7 +525,7 @@ internal class DeadCodeAnalysisService(DocumentFinder documentFinder)
 
 	private static bool ReferencesFieldSymbol(SyntaxToken token, SemanticModel semanticModel, IFieldSymbol field)
 	{
-		for (SyntaxNode? node = token.Parent; node != null; node = node.Parent)
+		for (var node = token.Parent; node != null; node = node.Parent)
 		{
 			var symbolInfo = semanticModel.GetSymbolInfo(node, CancellationToken.None);
 			if (SymbolMatchesField(symbolInfo.Symbol, field)
@@ -632,11 +605,11 @@ internal class DeadCodeAnalysisService(DocumentFinder documentFinder)
 
 			foreach (var derivedType in await SymbolFinder.FindDerivedClassesAsync(type, solution, cancellationToken: CancellationToken.None))
 			{
-				if (await IsTestRelatedTypeAsync(derivedType))
-				{
-					_testRelatedCache[key] = true;
-					return true;
-				}
+				if (!await IsTestRelatedTypeAsync(derivedType)) 
+					continue;
+
+				_testRelatedCache[key] = true;
+				return true;
 			}
 
 			return false;
@@ -666,11 +639,11 @@ internal class DeadCodeAnalysisService(DocumentFinder documentFinder)
 				}
 
 				var references = await SymbolFinder.FindReferencesAsync(derivedType, solution, cancellationToken: CancellationToken.None);
-				if (references.Any(reference => reference.Locations.Any(location => location.Location.IsInSource)))
-				{
-					_referencedDerivedTypeCache[key] = true;
-					return true;
-				}
+				if (!references.Any(reference => reference.Locations.Any(location => location.Location.IsInSource)))
+					continue;
+
+				_referencedDerivedTypeCache[key] = true;
+				return true;
 			}
 
 			return false;
@@ -708,11 +681,11 @@ internal class DeadCodeAnalysisService(DocumentFinder documentFinder)
 
 			foreach (var derivedType in await SymbolFinder.FindDerivedClassesAsync(type, solution, cancellationToken: CancellationToken.None))
 			{
-				if (ReferencesType(derivedType))
-				{
-					_typeOrDerivedUsageCache[key] = true;
-					return true;
-				}
+				if (!ReferencesType(derivedType))
+					continue;
+
+				_typeOrDerivedUsageCache[key] = true;
+				return true;
 			}
 
 			_typeOrDerivedUsageCache[key] = false;
@@ -796,9 +769,7 @@ internal class DeadCodeAnalysisService(DocumentFinder documentFinder)
 		{
 			yield return symbol.Name;
 
-			if (symbol is IMethodSymbol method
-			    && method.MethodKind == MethodKind.Ordinary
-			    && method.IsStatic
+			if (symbol is IMethodSymbol { MethodKind: MethodKind.Ordinary, IsStatic: true } method
 			    && (method.Name.StartsWith("Get", StringComparison.Ordinal)
 			        || method.Name.StartsWith("Set", StringComparison.Ordinal))
 			    && method.Name.Length > 3
@@ -808,8 +779,7 @@ internal class DeadCodeAnalysisService(DocumentFinder documentFinder)
 				yield return method.Name.Substring(3);
 			}
 
-			if (symbol is IFieldSymbol field
-			    && field.IsStatic
+			if (symbol is IFieldSymbol { IsStatic: true } field
 			    && field.Name.EndsWith("Property", StringComparison.Ordinal)
 			    && field.Name.Length > "Property".Length)
 			{
@@ -878,14 +848,8 @@ internal class DeadCodeAnalysisService(DocumentFinder documentFinder)
 				{
 					xamlPaths = Directory.EnumerateFiles(root, "*.xaml", SearchOption.AllDirectories);
 				}
-				catch (IOException)
-				{
-					continue;
-				}
-				catch (UnauthorizedAccessException)
-				{
-					continue;
-				}
+				catch (IOException) { continue; }
+				catch (UnauthorizedAccessException) { continue; }
 
 				foreach (var path in xamlPaths)
 				{
@@ -896,12 +860,8 @@ internal class DeadCodeAnalysisService(DocumentFinder documentFinder)
 					{
 						files.Add(new XamlFile(path, File.ReadAllText(path)));
 					}
-					catch (IOException)
-					{
-					}
-					catch (UnauthorizedAccessException)
-					{
-					}
+					catch (IOException) { }
+					catch (UnauthorizedAccessException) { }
 				}
 			}
 
@@ -930,7 +890,7 @@ internal class DeadCodeAnalysisService(DocumentFinder documentFinder)
 					.FirstOrDefault(path => !string.IsNullOrWhiteSpace(path));
 
 				if (!string.IsNullOrWhiteSpace(documentDirectory))
-					directories.Add(documentDirectory!);
+					directories.Add(documentDirectory);
 			}
 
 			return directories;
