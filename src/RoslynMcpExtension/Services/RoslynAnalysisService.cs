@@ -16,21 +16,21 @@ public class RoslynAnalysisService(VisualStudioWorkspace workspace) : IRoslynAna
 	public Task<ValidateFileResult> ValidateFileAsync(string filePath, bool includeWarnings, bool runAnalyzers)
 		=> new ValidateFileService(_documentFinder).ValidateFileAsync(filePath, includeWarnings, runAnalyzers);
 
-	public Task<FindReferencesResult> FindReferencesAsync(string filePath, int line, int column, int maxResults)
+	public Task<SymbolListResult> FindReferencesAsync(string filePath, int line, int column, int maxResults)
 		=> new FindReferencesService(_documentFinder).FindReferencesAsync(filePath, line, column, maxResults);
 
-	public Task<GoToDefinitionResult> GoToDefinitionAsync(string filePath, int line, int column)
+	public Task<SymbolListResult> GoToDefinitionAsync(string filePath, int line, int column)
 		=> new GoToDefinitionService(_documentFinder).GoToDefinitionAsync(filePath, line, column);
 
-	public Task<List<DocumentSymbolInfo>> GetDocumentSymbolsAsync(string filePath)
+	public Task<SymbolListResult> GetDocumentSymbolsAsync(string filePath)
 		=> new DocumentSymbolsService(_documentFinder).GetDocumentSymbolsAsync(filePath);
 
-	public Task<SearchSymbolsResult> SearchSymbolsAsync(string query, int maxResults)
+	public Task<SymbolListResult> SearchSymbolsAsync(string query, int maxResults)
 		=> new SearchSymbolsService(_documentFinder).SearchSymbolsAsync(query, maxResults);
 
-	public Task<DeadCodeAnalysisResult> FindDeadCodeAsync(int maxResults, bool includeInternal, bool includePublic)
+	public Task<SymbolListResult> FindDeadCodeAsync(int maxResults, bool includeInternal, bool includePublic)
 		=> new DeadCodeAnalysisService(_documentFinder).FindDeadCodeAsync(maxResults, includeInternal, includePublic);
 
-	public Task<MemberLookupResult> GetSymbolInfoAsync(string filePath, int line, int column)
+	public Task<SymbolInfoResult> GetSymbolInfoAsync(string filePath, int line, int column)
 		=> new SymbolInfoService(_documentFinder).GetSymbolInfoAsync(filePath, line, column);
 }

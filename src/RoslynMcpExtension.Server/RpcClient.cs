@@ -57,21 +57,21 @@ public sealed class RpcClient(CancellationTokenSource shutdownCts) : IRoslynAnal
     public Task<ValidateFileResult> ValidateFileAsync(string filePath, bool includeWarnings, bool runAnalyzers)
         => Proxy.ValidateFileAsync(filePath, includeWarnings, runAnalyzers);
 
-    public Task<FindReferencesResult> FindReferencesAsync(string filePath, int line, int column, int maxResults)
+    public Task<SymbolListResult> FindReferencesAsync(string filePath, int line, int column, int maxResults)
         => Proxy.FindReferencesAsync(filePath, line, column, maxResults);
 
-    public Task<GoToDefinitionResult> GoToDefinitionAsync(string filePath, int line, int column)
+    public Task<SymbolListResult> GoToDefinitionAsync(string filePath, int line, int column)
         => Proxy.GoToDefinitionAsync(filePath, line, column);
 
-    public Task<List<DocumentSymbolInfo>> GetDocumentSymbolsAsync(string filePath)
+    public Task<SymbolListResult> GetDocumentSymbolsAsync(string filePath)
         => Proxy.GetDocumentSymbolsAsync(filePath);
 
-    public Task<SearchSymbolsResult> SearchSymbolsAsync(string query, int maxResults)
+    public Task<SymbolListResult> SearchSymbolsAsync(string query, int maxResults)
         => Proxy.SearchSymbolsAsync(query, maxResults);
 
-    public Task<DeadCodeAnalysisResult> FindDeadCodeAsync(int maxResults, bool includeInternal, bool includePublic)
+    public Task<SymbolListResult> FindDeadCodeAsync(int maxResults, bool includeInternal, bool includePublic)
         => Proxy.FindDeadCodeAsync(maxResults, includeInternal, includePublic);
 
-    public Task<MemberLookupResult> GetSymbolInfoAsync(string filePath, int line, int column)
+    public Task<SymbolInfoResult> GetSymbolInfoAsync(string filePath, int line, int column)
         => Proxy.GetSymbolInfoAsync(filePath, line, column);
 }

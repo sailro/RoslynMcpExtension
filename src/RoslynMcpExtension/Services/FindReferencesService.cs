@@ -8,9 +8,9 @@ namespace RoslynMcpExtension.Services;
 
 internal class FindReferencesService(DocumentFinder documentFinder)
 {
-	public async Task<FindReferencesResult> FindReferencesAsync(string filePath, int line, int column, int maxResults)
+	public async Task<SymbolListResult> FindReferencesAsync(string filePath, int line, int column, int maxResults)
 	{
-		var result = new FindReferencesResult();
+		var result = new SymbolListResult();
 
 		try
 		{
@@ -37,8 +37,7 @@ internal class FindReferencesService(DocumentFinder documentFinder)
 				return result;
 			}
 
-			result.Found = true;
-			result.Member = CodeMemberInfoFactory.CreateDetailed(
+			result.Symbol = CodeMemberInfoFactory.Create(
 				symbol,
 				symbol.Name,
 				"member",
@@ -56,15 +55,14 @@ internal class FindReferencesService(DocumentFinder documentFinder)
 					var sourceText = await loc.SourceTree!.GetTextAsync();
 					var refLine = sourceText.Lines[lineSpan.StartLinePosition.Line];
 
-					result.References.Add(new ReferenceLocationInfo
+					result.Members.Add(new SymbolLocation
 					{
+						Name = refSymbol.Definition.Name,
+						FullName = refSymbol.Definition.ToDisplayString(),
+						MemberType = "definition",
 						FilePath = loc.SourceTree.FilePath,
 						StartLine = lineSpan.StartLinePosition.Line + 1,
-						StartColumn = lineSpan.StartLinePosition.Character + 1,
-						EndLine = lineSpan.EndLinePosition.Line + 1,
-						EndColumn = lineSpan.EndLinePosition.Character + 1,
-						Preview = refLine.ToString().Trim(),
-						IsDefinition = true
+						StartColumn = lineSpan.StartLinePosition.Character + 1
 					});
 					count++;
 				}
@@ -73,22 +71,18 @@ internal class FindReferencesService(DocumentFinder documentFinder)
 				{
 					if (count >= maxResults) break;
 					var lineSpan = loc.Location.GetLineSpan();
-					var sourceText = await loc.Location.SourceTree!.GetTextAsync();
-					var refLine = sourceText.Lines[lineSpan.StartLinePosition.Line];
 
 					var containingMember = DocumentFinder.GetContainingMemberName(
-						await loc.Location.SourceTree.GetRootAsync(), loc.Location.SourceSpan);
+						await loc.Location.SourceTree!.GetRootAsync(), loc.Location.SourceSpan);
 
-					result.References.Add(new ReferenceLocationInfo
+					result.Members.Add(new SymbolLocation
 					{
+						Name = containingMember ?? refSymbol.Definition.Name,
+						FullName = refSymbol.Definition.ToDisplayString(),
+						MemberType = "reference",
 						FilePath = loc.Location.SourceTree.FilePath,
 						StartLine = lineSpan.StartLinePosition.Line + 1,
-						StartColumn = lineSpan.StartLinePosition.Character + 1,
-						EndLine = lineSpan.EndLinePosition.Line + 1,
-						EndColumn = lineSpan.EndLinePosition.Character + 1,
-						Preview = refLine.ToString().Trim(),
-						ContainingMember = containingMember,
-						IsDefinition = false
+						StartColumn = lineSpan.StartLinePosition.Character + 1
 					});
 					count++;
 				}

@@ -8,13 +8,13 @@ Unlike standalone Roslyn MCP servers that create their own `MSBuildWorkspace`, t
 
 | Tool | Description |
 |------|-------------|
-| `roslyn_validate_file` | Get live diagnostics (errors, warnings, analyzer results) for a C# file |
-| `roslyn_find_references` | Semantic find-all-references using `SymbolFinder` (not text search) |
-| `roslyn_go_to_definition` | Navigate to symbol definition via Roslyn semantic model |
-| `roslyn_get_document_symbols` | List all symbols in a file with types, modifiers, and spans |
-| `roslyn_search_symbols` | Search for symbol declarations across the solution by name |
-| `roslyn_find_dead_code` | Find potentially dead types, methods, and fields across the active workspace, with optional inclusion of public APIs |
-| `roslyn_get_symbol_info` | Get detailed type information, base types, interfaces, parameters |
+| `roslyn_validate_file` | Compiler errors, warnings, and optional analyzer diagnostics for a C# file |
+| `roslyn_find_references` | Find all references to a symbol across the solution |
+| `roslyn_go_to_definition` | Navigate to a symbol's definition |
+| `roslyn_get_document_symbols` | List all symbols in a file with types, modifiers, and line spans |
+| `roslyn_search_symbols` | Search symbol declarations by name across the solution |
+| `roslyn_find_dead_code` | Find potentially unused types, methods, and fields |
+| `roslyn_get_symbol_info` | Get detailed information and documentation for a symbol |
 
 ## Prerequisites
 
@@ -100,10 +100,11 @@ The analysis is intentionally conservative and already filters several common fa
 
 - **Test code**: xUnit, NUnit, and MSTest attributes such as `Fact`, `Theory`, `Test`, `TestCase`, `TestMethod`, `DataTestMethod`, setup/cleanup attributes, and types that contain or inherit test methods
 - **Interface contracts**: both explicit and implicit interface implementations
-- **XAML usage**: event handlers, code-behind types, and parameterless constructors for controls and windows instantiated from `.xaml`
+- **XAML usage**: event handlers, code-behind types, attached dependency properties, and parameterless constructors for controls and windows instantiated from `.xaml` — including base classes whose derived types are XAML-activated
 - **Visual Studio / MEF composition**: `Export`, `Import`, `ImportingConstructor`, and Visual Studio package types decorated with `PackageRegistrationAttribute`
 - **Generated and interop code**: common generated files, compiler-generated members, and marshaling / `StructLayout` fields
 - **Extension patterns**: static extension containers, classic `this` extension methods, and newer C# `extension(...) { }` blocks
+- **Inherited test base classes**: abstract base types whose derived classes are test containers
 
 Dead-code detection can never be perfect, especially for reflection-heavy or externally activated code, so results should still be reviewed before deletion.
 
@@ -118,15 +119,27 @@ Find all references to the method ProcessOrder in C:\MyProject\src\OrderService.
 ```
 
 ```
+Go to the definition of the symbol at line 15, column 10 in C:\MyProject\src\OrderService.cs
+```
+
+```
+List all symbols in C:\MyProject\src\UserService.cs
+```
+
+```
 Search for all symbols named "Repository" in the current solution
 ```
 
 ```
-Find dead code in the active workspace and list unused methods, fields, and types
+What is the symbol at line 25, column 8 in C:\MyProject\src\OrderService.cs?
 ```
 
 ```
-Find dead code in the active workspace and include public members as well
+Find dead code in the active workspace
+```
+
+```
+Find dead code including public members
 ```
 
 ## How It Differs from Other Roslyn MCP Servers

@@ -96,8 +96,6 @@ internal class ValidateFileService(DocumentFinder documentFinder)
 			FilePath = diag.Location.SourceTree?.FilePath ?? string.Empty,
 			StartLine = lineSpan.StartLinePosition.Line + 1,
 			StartColumn = lineSpan.StartLinePosition.Character + 1,
-			EndLine = lineSpan.EndLinePosition.Line + 1,
-			EndColumn = lineSpan.EndLinePosition.Character + 1,
 			Category = diag.Descriptor.Category
 		};
 	}

@@ -8,9 +8,9 @@ namespace RoslynMcpExtension.Services;
 
 internal class GoToDefinitionService(DocumentFinder documentFinder)
 {
-	public async Task<GoToDefinitionResult> GoToDefinitionAsync(string filePath, int line, int column)
+	public async Task<SymbolListResult> GoToDefinitionAsync(string filePath, int line, int column)
 	{
-		var result = new GoToDefinitionResult();
+		var result = new SymbolListResult();
 
 		try
 		{
@@ -37,8 +37,7 @@ internal class GoToDefinitionService(DocumentFinder documentFinder)
 				return result;
 			}
 
-			result.Found = true;
-			result.Member = CodeMemberInfoFactory.CreateDetailed(
+			result.Symbol = CodeMemberInfoFactory.Create(
 				symbol,
 				symbol.Name,
 				"member",
@@ -52,25 +51,24 @@ internal class GoToDefinitionService(DocumentFinder documentFinder)
 					var sourceText = await loc.SourceTree!.GetTextAsync();
 					var defLine = sourceText.Lines[lineSpan.StartLinePosition.Line];
 
-					result.Definitions.Add(new DefinitionLocationInfo
+					result.Members.Add(new SymbolLocation
 					{
+						Name = symbol.Name,
+						FullName = defLine.ToString().Trim(),
+						MemberType = "definition",
 						FilePath = loc.SourceTree.FilePath,
 						StartLine = lineSpan.StartLinePosition.Line + 1,
-						StartColumn = lineSpan.StartLinePosition.Character + 1,
-						EndLine = lineSpan.EndLinePosition.Line + 1,
-						EndColumn = lineSpan.EndLinePosition.Character + 1,
-						Preview = defLine.ToString().Trim(),
-						IsFromMetadata = false
+						StartColumn = lineSpan.StartLinePosition.Character + 1
 					});
 				}
 				else if (loc.IsInMetadata)
 				{
-					result.Definitions.Add(new DefinitionLocationInfo
+					result.Members.Add(new SymbolLocation
 					{
-						FilePath = symbol.ContainingAssembly?.Name ?? "metadata",
-						Preview = symbol.ToDisplayString(),
-						IsFromMetadata = true,
-						AssemblyName = symbol.ContainingAssembly?.Name
+						Name = symbol.Name,
+						FullName = symbol.ToDisplayString(),
+						MemberType = "metadata",
+						FilePath = symbol.ContainingAssembly?.Name ?? "metadata"
 					});
 				}
 			}

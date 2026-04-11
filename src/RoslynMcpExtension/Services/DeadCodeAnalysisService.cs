@@ -44,9 +44,9 @@ internal class DeadCodeAnalysisService(DocumentFinder documentFinder)
 		"CollectionDefinitionAttribute"
 	];
 
-	public async Task<DeadCodeAnalysisResult> FindDeadCodeAsync(int maxResults, bool includeInternal, bool includePublic)
+	public async Task<SymbolListResult> FindDeadCodeAsync(int maxResults, bool includeInternal, bool includePublic)
 	{
-		var result = new DeadCodeAnalysisResult();
+		var result = new SymbolListResult();
 
 		try
 		{

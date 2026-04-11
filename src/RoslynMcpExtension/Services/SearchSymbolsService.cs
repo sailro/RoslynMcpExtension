@@ -10,9 +10,9 @@ namespace RoslynMcpExtension.Services;
 
 internal class SearchSymbolsService(DocumentFinder documentFinder)
 {
-	public async Task<SearchSymbolsResult> SearchSymbolsAsync(string query, int maxResults)
+	public async Task<SymbolListResult> SearchSymbolsAsync(string query, int maxResults)
 	{
-		var result = new SearchSymbolsResult();
+		var result = new SymbolListResult();
 
 		try
 		{

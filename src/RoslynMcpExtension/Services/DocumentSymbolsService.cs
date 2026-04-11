@@ -9,43 +9,41 @@ namespace RoslynMcpExtension.Services;
 
 internal class DocumentSymbolsService(DocumentFinder documentFinder)
 {
-	public async Task<List<DocumentSymbolInfo>> GetDocumentSymbolsAsync(string filePath)
+	public async Task<SymbolListResult> GetDocumentSymbolsAsync(string filePath)
 	{
-		var symbols = new List<DocumentSymbolInfo>();
+		var result = new SymbolListResult();
 
 		try
 		{
 			var document = documentFinder.FindDocument(filePath);
-			if (document == null) return symbols;
+			if (document == null) return result;
 
 			var root = await document.GetSyntaxRootAsync();
 			var semanticModel = await document.GetSemanticModelAsync();
-			if (root == null || semanticModel == null) return symbols;
+			if (root == null || semanticModel == null) return result;
 
-			CollectSymbols(root, semanticModel, symbols);
+			CollectSymbols(root, semanticModel, result.Members);
 		}
 		catch
 		{
-			// Return what we have
 		}
 
-		return symbols;
+		return result;
 	}
 
-	private static void CollectSymbols(SyntaxNode node, SemanticModel semanticModel, List<DocumentSymbolInfo> symbols)
+	private static void CollectSymbols(SyntaxNode node, SemanticModel semanticModel, List<SymbolLocation> symbols)
 	{
 		foreach (var child in node.ChildNodes())
 		{
 			var childSymbols = CreateSymbolInfos(child, semanticModel);
 			foreach (var symbolInfo in childSymbols)
-			{
-				CollectSymbols(child, semanticModel, symbolInfo.Children);
 				symbols.Add(symbolInfo);
-			}
+
+			CollectSymbols(child, semanticModel, symbols);
 		}
 	}
 
-	private static IEnumerable<DocumentSymbolInfo> CreateSymbolInfos(SyntaxNode node, SemanticModel semanticModel)
+	private static IEnumerable<SymbolLocation> CreateSymbolInfos(SyntaxNode node, SemanticModel semanticModel)
 	{
 		switch (node)
 		{
@@ -118,10 +116,10 @@ internal class DocumentSymbolsService(DocumentFinder documentFinder)
 		}
 	}
 
-	private static DocumentSymbolInfo CreateSymbolInfo(string name, SyntaxNode node, SemanticModel model)
+	private static SymbolLocation CreateSymbolInfo(string name, SyntaxNode node, SemanticModel model)
 	{
 		var declaredSymbol = model.GetDeclaredSymbol(node);
-		return CodeMemberInfoFactory.CreateDocumentSymbol(
+		return CodeMemberInfoFactory.Create(
 			declaredSymbol,
 			name,
 			"member",
@@ -142,7 +140,7 @@ internal class DocumentSymbolsService(DocumentFinder documentFinder)
 		};
 	}
 
-	private static void AddModifiers(DocumentSymbolInfo info, SyntaxTokenList modifiers)
+	private static void AddModifiers(SymbolLocation info, SyntaxTokenList modifiers)
 	{
 		info.Modifiers = [.. modifiers.Select(m => m.Text)];
 	}

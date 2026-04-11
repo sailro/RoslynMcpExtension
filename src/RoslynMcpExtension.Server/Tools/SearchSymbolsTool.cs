@@ -9,8 +9,8 @@ namespace RoslynMcpExtension.Server.Tools;
 public sealed class SearchSymbolsTool(RpcClient rpc)
 {
 	[McpServerTool(Name = "roslyn_search_symbols")]
-	[Description("Searches for symbol declarations across the entire solution by name. Uses Roslyn's SymbolFinder for accurate results matching types, methods, properties, and fields.")]
-	public Task<SearchSymbolsResult> SearchSymbols(
+	[Description("Searches for symbol declarations across the entire solution by name or partial name.")]
+	public Task<SymbolListResult> SearchSymbols(
 		[Description("Search query (symbol name or partial name, case-insensitive)")] string query,
 		[Description("Maximum number of results to return (default: 30)")] int maxResults = 30)
 		=> rpc.SearchSymbolsAsync(query, maxResults);

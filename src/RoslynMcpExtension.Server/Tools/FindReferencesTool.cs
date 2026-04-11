@@ -9,8 +9,8 @@ namespace RoslynMcpExtension.Server.Tools;
 public sealed class FindReferencesTool(RpcClient rpc)
 {
 	[McpServerTool(Name = "roslyn_find_references")]
-	[Description("Finds all references to a symbol at a given position using Roslyn's semantic analysis. Returns definition and usage locations across the entire solution. Much more accurate than text search.")]
-	public Task<FindReferencesResult> FindReferences(
+	[Description("Finds all references to a symbol at a given position using Roslyn's semantic analysis. Returns the symbol and a list of reference locations across the entire solution.")]
+	public Task<SymbolListResult> FindReferences(
 		[Description("Absolute path to the C# file")] string filePath,
 		[Description("Line number (1-based)")] int line,
 		[Description("Column number (1-based)")] int column,
