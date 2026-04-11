@@ -15,8 +15,6 @@ internal sealed class RpcServer(RoslynAnalysisService analysisService, OutputLog
     private bool _disposed;
     private string? _lastError;
 
-    public bool IsRunning => _jsonRpc != null && !_disposed;
-
     public string Start()
     {
         if (_disposed) throw new ObjectDisposedException(nameof(RpcServer));

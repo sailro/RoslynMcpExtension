@@ -39,13 +39,13 @@ internal sealed class ServerProcessManager(OutputLogger? logger)
 			},
 			EnableRaisingEvents = true
 		};
-		_serverProcess.Exited += (s, e) =>
+		_serverProcess.Exited += (_, _) =>
 	    {
 		    logger?.Log($"MCP Server process exited with code {_serverProcess?.ExitCode ?? -1}");
 		    _serverProcess = null;
 	    };
 
-	    _serverProcess.ErrorDataReceived += (s, e) =>
+	    _serverProcess.ErrorDataReceived += (_, e) =>
 	    {
 		    if (!string.IsNullOrEmpty(e.Data))
 			    logger?.Log($"[MCP Server] {e.Data}");

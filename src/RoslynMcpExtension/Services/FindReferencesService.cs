@@ -52,15 +52,13 @@ internal class FindReferencesService(DocumentFinder documentFinder)
 				{
 					if (count >= maxResults) break;
 					var lineSpan = loc.GetLineSpan();
-					var sourceText = await loc.SourceTree!.GetTextAsync();
-					var refLine = sourceText.Lines[lineSpan.StartLinePosition.Line];
 
 					result.Members.Add(new SymbolLocation
 					{
 						Name = refSymbol.Definition.Name,
 						FullName = refSymbol.Definition.ToDisplayString(),
 						MemberType = "definition",
-						FilePath = loc.SourceTree.FilePath,
+						FilePath = loc.SourceTree!.FilePath,
 						StartLine = lineSpan.StartLinePosition.Line + 1,
 						StartColumn = lineSpan.StartLinePosition.Character + 1
 					});

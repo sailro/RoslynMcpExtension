@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -24,8 +25,9 @@ internal class DocumentSymbolsService(DocumentFinder documentFinder)
 
 			CollectSymbols(root, semanticModel, result.Members);
 		}
-		catch
+		catch(Exception ex)
 		{
+			result.ErrorMessage = ex.Message;
 		}
 
 		return result;
