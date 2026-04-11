@@ -48,12 +48,14 @@ public sealed class RpcClient(CancellationTokenSource shutdownCts) : IRoslynAnal
     // IServerRpc
     public Task ShutdownAsync()
     {
-        Console.Error.WriteLine("Shutdown requested via RPC");
         shutdownCts.Cancel();
         return Task.CompletedTask;
     }
 
     // IRoslynAnalysisRpc proxy methods
+    public Task LogAsync(string message)
+        => Proxy.LogAsync(message);
+
     public Task<ValidateFileResult> ValidateFileAsync(string filePath, bool includeWarnings, bool runAnalyzers)
         => Proxy.ValidateFileAsync(filePath, includeWarnings, runAnalyzers);
 

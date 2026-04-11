@@ -14,6 +14,10 @@
     <StartProgram>$(DevEnvDir)devenv.exe</StartProgram>
     <StartArguments>/rootsuffix Exp</StartArguments>
     <CustomAfterMicrosoftCSharpTargets Condition="$(VsSDKInstall) != ''">$(VsSDKInstall)\Microsoft.VsSDK.targets</CustomAfterMicrosoftCSharpTargets>
+    <!-- VS host process provides the correct assembly versions at runtime; suppress version-conflict noise. -->
+    <MSBuildWarningsAsMessages>$(MSBuildWarningsAsMessages);MSB3277</MSBuildWarningsAsMessages>
+    <!-- VS SDK 17.14 requires Newtonsoft.Json 13.0.3; the toolkit check is outdated. -->
+    <CheckNewtonsoftJsonVersion>false</CheckNewtonsoftJsonVersion>
   </PropertyGroup>
 
   <ItemGroup>

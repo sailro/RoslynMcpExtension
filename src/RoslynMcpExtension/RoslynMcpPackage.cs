@@ -20,6 +20,7 @@ public sealed class RoslynMcpPackage : AsyncPackage
 {
     public static RoslynMcpPackage? Instance { get; private set; }
 
+    internal OutputLogger? Logger { get; private set; }
     internal RoslynAnalysisService? AnalysisService { get; private set; }
     internal RpcServer? RpcServer { get; private set; }
     internal ServerProcessManager? ProcessManager { get; private set; }
@@ -31,23 +32,48 @@ public sealed class RoslynMcpPackage : AsyncPackage
 
         Instance = this;
 
-        if (await GetServiceAsync(typeof(SComponentModel)) is not IComponentModel componentModel)
-	        return;
-
-        AnalysisService = componentModel.GetService<RoslynAnalysisService>();
-        RpcServer = new RpcServer(AnalysisService);
-        ProcessManager = new ServerProcessManager();
-
-        await ServerCommands.InitializeAsync(this);
-
-        var settings = (SettingsPage)GetDialogPage(typeof(SettingsPage));
-        if (settings.AutoStart)
+        try
         {
-            _ = Task.Run(async () =>
+            Logger = OutputLogger.Create();
+            Logger?.Log("Extension loading...");
+
+            if (await GetServiceAsync(typeof(SComponentModel)) is not IComponentModel componentModel)
             {
-                var pipeName = RpcServer.Start();
-                await ProcessManager.StartAsync(pipeName, settings.Port, settings.ServerName);
-            }, cancellationToken);
+                Logger?.Log("Failed to obtain IComponentModel service");
+                return;
+            }
+
+            AnalysisService = componentModel.GetService<RoslynAnalysisService>();
+            AnalysisService.Logger = Logger;
+
+            RpcServer = new RpcServer(AnalysisService, Logger);
+            ProcessManager = new ServerProcessManager(Logger);
+
+            await ServerCommands.InitializeAsync(this);
+
+            var settings = (SettingsPage)GetDialogPage(typeof(SettingsPage));
+            if (settings.AutoStart)
+            {
+                Logger?.Log("Auto-starting MCP server...");
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        var pipeName = RpcServer.Start();
+                        await ProcessManager.StartAsync(pipeName, settings.Port, settings.ServerName);
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger?.Log($"Auto-start failed: {ex.Message}");
+                    }
+                }, cancellationToken);
+            }
+
+            Logger?.Log("Extension loaded");
+        }
+        catch (Exception ex)
+        {
+            Logger?.Log($"Extension initialization failed: {ex.Message}");
         }
     }
 
@@ -55,6 +81,7 @@ public sealed class RoslynMcpPackage : AsyncPackage
     {
         if (disposing)
         {
+            Logger?.Log("Extension shutting down...");
             _ = ProcessManager?.StopAsync();
             RpcServer?.Dispose();
             Instance = null;

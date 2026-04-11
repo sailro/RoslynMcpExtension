@@ -308,8 +308,8 @@ internal class DeadCodeAnalysisService(DocumentFinder documentFinder)
 		var fileName = Path.GetFileName(normalizedPath);
 		var separator = Path.DirectorySeparatorChar.ToString();
 
-		return normalizedPath.Contains($"{separator}obj{separator}", StringComparison.OrdinalIgnoreCase)
-		       || normalizedPath.Contains($"{separator}bin{separator}", StringComparison.OrdinalIgnoreCase)
+		return normalizedPath.IndexOf($"{separator}obj{separator}", StringComparison.OrdinalIgnoreCase) >= 0
+		       || normalizedPath.IndexOf($"{separator}bin{separator}", StringComparison.OrdinalIgnoreCase) >= 0
 		       || fileName.StartsWith("TemporaryGeneratedFile_", StringComparison.OrdinalIgnoreCase)
 		       || fileName.EndsWith(".g.cs", StringComparison.OrdinalIgnoreCase)
 		       || fileName.EndsWith(".g.i.cs", StringComparison.OrdinalIgnoreCase)

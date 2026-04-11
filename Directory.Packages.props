@@ -1,6 +1,7 @@
 <Project>
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+    <CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
   </PropertyGroup>
   <ItemGroup>
     <PackageVersion Include="Community.VisualStudio.Toolkit.17" Version="17.0.551" />
@@ -9,6 +10,7 @@
     <PackageVersion Include="Microsoft.VisualStudio.SDK" Version="17.14.40265" />
     <PackageVersion Include="Microsoft.VSSDK.BuildTools" Version="17.14.2142" />
     <PackageVersion Include="ModelContextProtocol.AspNetCore" Version="1.2.0" />
+    <PackageVersion Include="Newtonsoft.Json" Version="13.0.3" />
     <!-- VS2022 provides StreamJsonRpc 2.22 at runtime; the standalone net10 server overrides to 2.24.84. -->
     <PackageVersion Include="StreamJsonRpc" Version="[2.22.23]" />
     <PackageVersion Include="System.CommandLine" Version="2.0.5" />

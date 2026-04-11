@@ -1,5 +1,6 @@
-using System.Collections.Generic;
+using System;
 using System.ComponentModel.Composition;
+using System.Diagnostics;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.LanguageServices;
 using RoslynMcpExtension.Shared;
@@ -13,24 +14,56 @@ public class RoslynAnalysisService(VisualStudioWorkspace workspace) : IRoslynAna
 {
 	private readonly DocumentFinder _documentFinder = new(workspace);
 
+	internal OutputLogger? Logger { get; set; }
+
+	public Task LogAsync(string message)
+	{
+		Logger?.Log($"[MCP Server] {message}");
+		return Task.CompletedTask;
+	}
+
 	public Task<ValidateFileResult> ValidateFileAsync(string filePath, bool includeWarnings, bool runAnalyzers)
-		=> new ValidateFileService(_documentFinder).ValidateFileAsync(filePath, includeWarnings, runAnalyzers);
+		=> InvokeAsync(nameof(ValidateFileAsync),
+			() => new ValidateFileService(_documentFinder).ValidateFileAsync(filePath, includeWarnings, runAnalyzers));
 
 	public Task<SymbolListResult> FindReferencesAsync(string filePath, int line, int column, int maxResults)
-		=> new FindReferencesService(_documentFinder).FindReferencesAsync(filePath, line, column, maxResults);
+		=> InvokeAsync(nameof(FindReferencesAsync),
+			() => new FindReferencesService(_documentFinder).FindReferencesAsync(filePath, line, column, maxResults));
 
 	public Task<SymbolListResult> GoToDefinitionAsync(string filePath, int line, int column)
-		=> new GoToDefinitionService(_documentFinder).GoToDefinitionAsync(filePath, line, column);
+		=> InvokeAsync(nameof(GoToDefinitionAsync),
+			() => new GoToDefinitionService(_documentFinder).GoToDefinitionAsync(filePath, line, column));
 
 	public Task<SymbolListResult> GetDocumentSymbolsAsync(string filePath)
-		=> new DocumentSymbolsService(_documentFinder).GetDocumentSymbolsAsync(filePath);
+		=> InvokeAsync(nameof(GetDocumentSymbolsAsync),
+			() => new DocumentSymbolsService(_documentFinder).GetDocumentSymbolsAsync(filePath));
 
 	public Task<SymbolListResult> SearchSymbolsAsync(string query, int maxResults)
-		=> new SearchSymbolsService(_documentFinder).SearchSymbolsAsync(query, maxResults);
+		=> InvokeAsync(nameof(SearchSymbolsAsync),
+			() => new SearchSymbolsService(_documentFinder).SearchSymbolsAsync(query, maxResults));
 
 	public Task<SymbolListResult> FindDeadCodeAsync(int maxResults, bool includeInternal, bool includePublic)
-		=> new DeadCodeAnalysisService(_documentFinder).FindDeadCodeAsync(maxResults, includeInternal, includePublic);
+		=> InvokeAsync(nameof(FindDeadCodeAsync),
+			() => new DeadCodeAnalysisService(_documentFinder).FindDeadCodeAsync(maxResults, includeInternal, includePublic));
 
 	public Task<SymbolInfoResult> GetSymbolInfoAsync(string filePath, int line, int column)
-		=> new SymbolInfoService(_documentFinder).GetSymbolInfoAsync(filePath, line, column);
+		=> InvokeAsync(nameof(GetSymbolInfoAsync),
+			() => new SymbolInfoService(_documentFinder).GetSymbolInfoAsync(filePath, line, column));
+
+	private async Task<T> InvokeAsync<T>(string toolName, Func<Task<T>> action)
+	{
+		Logger?.Log($"Tool '{toolName}' invoked");
+		var sw = Stopwatch.StartNew();
+		try
+		{
+			var result = await action();
+			Logger?.Log($"Tool '{toolName}' completed in {sw.ElapsedMilliseconds}ms");
+			return result;
+		}
+		catch (Exception ex)
+		{
+			Logger?.Log($"Tool '{toolName}' failed after {sw.ElapsedMilliseconds}ms: {ex.Message}");
+			throw;
+		}
+	}
 }

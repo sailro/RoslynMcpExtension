@@ -5,6 +5,7 @@ namespace RoslynMcpExtension.Shared;
 
 public partial interface IRoslynAnalysisRpc
 {
+    Task LogAsync(string message);
     Task<ValidateFileResult> ValidateFileAsync(string filePath, bool includeWarnings, bool runAnalyzers);
     Task<SymbolListResult> FindReferencesAsync(string filePath, int line, int column, int maxResults);
     Task<SymbolListResult> GoToDefinitionAsync(string filePath, int line, int column);

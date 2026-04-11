@@ -28,11 +28,20 @@ internal static class ServerCommands
         var pkg = RoslynMcpPackage.Instance;
         if (pkg?.RpcServer == null || pkg.ProcessManager == null) return;
 
+        pkg.Logger?.Log("Start Server command invoked");
+
         var settings = (SettingsPage)pkg.GetDialogPage(typeof(SettingsPage));
         _ = Task.Run(async () =>
         {
-            var pipeName = pkg.RpcServer.Start();
-            await pkg.ProcessManager.StartAsync(pipeName, settings.Port, settings.ServerName);
+            try
+            {
+                var pipeName = pkg.RpcServer.Start();
+                await pkg.ProcessManager.StartAsync(pipeName, settings.Port, settings.ServerName);
+            }
+            catch (Exception ex)
+            {
+                pkg.Logger?.Log($"Start Server command failed: {ex.Message}");
+            }
         });
     }
 
@@ -41,6 +50,20 @@ internal static class ServerCommands
         var pkg = RoslynMcpPackage.Instance;
         if (pkg?.ProcessManager == null) return;
 
-        _ = Task.Run(async () => await pkg.ProcessManager.StopAsync());
+        pkg.Logger?.Log("Stop Server command invoked");
+
+        pkg.RpcServer?.Stop();
+
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await pkg.ProcessManager.StopAsync();
+            }
+            catch (Exception ex)
+            {
+                pkg.Logger?.Log($"Stop Server command failed: {ex.Message}");
+            }
+        });
     }
 }

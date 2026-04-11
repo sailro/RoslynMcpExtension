@@ -4,9 +4,11 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using ModelContextProtocol.AspNetCore;
 using ModelContextProtocol.Protocol;
 using RoslynMcpExtension.Server;
 using RoslynMcpExtension.Server.Tools;
@@ -69,77 +71,110 @@ static async Task RunServerAsync(string pipeName, string host, int port, string 
     };
 
     using var shutdownCts = new CancellationTokenSource();
-    var rpcClient = new RpcClient(shutdownCts);
+    RpcClient? rpcClient = null;
 
-    Console.Error.WriteLine($"Connecting to Visual Studio via pipe: {pipeName}");
-    await rpcClient.ConnectAsync(pipeName);
-    Console.Error.WriteLine("Connected to Visual Studio");
-
-    var serverDirectory = AppContext.BaseDirectory;
-    Directory.SetCurrentDirectory(serverDirectory);
-
-    var builder = WebApplication.CreateBuilder(new WebApplicationOptions
+    try
     {
-        ContentRootPath = serverDirectory
-    });
+        rpcClient = new RpcClient(shutdownCts);
+        await rpcClient.ConnectAsync(pipeName);
+    }
+    catch (Exception ex)
+    {
+        Console.Error.WriteLine($"Failed to connect to Visual Studio via pipe '{pipeName}': {ex.Message}");
+        rpcClient?.Dispose();
+        return;
+    }
 
-    builder.Logging.SetMinimumLevel(msLogLevel);
-    builder.Logging.AddFilter("Microsoft.AspNetCore", LogLevel.Warning);
-    builder.Logging.AddFilter("ModelContextProtocol", msLogLevel);
+    await rpcClient.LogAsync($"Connected to Visual Studio via pipe: {pipeName}");
 
-    builder.Services.AddSingleton(rpcClient);
+    WebApplication app;
+    try
+    {
+        var serverDirectory = AppContext.BaseDirectory;
+        Directory.SetCurrentDirectory(serverDirectory);
 
-    builder.Services.AddMcpServer(options =>
+        var builder = WebApplication.CreateBuilder(new WebApplicationOptions
         {
-            options.ServerInfo = new Implementation
+            ContentRootPath = serverDirectory
+        });
+
+        builder.Logging.SetMinimumLevel(msLogLevel);
+        builder.Logging.AddFilter("Microsoft.AspNetCore", LogLevel.Warning);
+        builder.Logging.AddFilter("ModelContextProtocol", msLogLevel);
+
+        builder.Services.AddSingleton(rpcClient);
+        builder.Services.AddSingleton<ISessionMigrationHandler>(sp => new SessionMigrationHandler(sp.GetRequiredService<RpcClient>()));
+
+        builder.Services.AddMcpServer(options =>
             {
-                Name = serverName,
-                Version = "1.0.0"
-            };
-        })
-        .WithHttpTransport(options =>
-        {
-            // This server only exposes request/response tools and does not rely on
-            // server-push features, so stateless transport avoids stale session
-            // failures across reconnects and server restarts.
-            options.Stateless = true;
-        })
-        .WithTools<ValidateFileTool>()
-        .WithTools<FindReferencesTool>()
-        .WithTools<GoToDefinitionTool>()
-        .WithTools<DocumentSymbolsTool>()
-        .WithTools<SearchSymbolsTool>()
-        .WithTools<DeadCodeTool>()
-        .WithTools<SymbolInfoTool>();
+                options.ServerInfo = new Implementation
+                {
+                    Name = serverName,
+                    Version = "1.0.0"
+                };
+            })
+            .WithHttpTransport(options =>
+            {
+                // Enable legacy SSE endpoints (/sse + /message) so existing clients
+                // that were configured with http://localhost:5050/sse keep working.
+#pragma warning disable MCP9004 // EnableLegacySse is obsolete
+                options.EnableLegacySse = true;
+#pragma warning restore MCP9004
+            })
+            .WithTools<ValidateFileTool>()
+            .WithTools<FindReferencesTool>()
+            .WithTools<GoToDefinitionTool>()
+            .WithTools<DocumentSymbolsTool>()
+            .WithTools<SearchSymbolsTool>()
+            .WithTools<DeadCodeTool>()
+            .WithTools<SymbolInfoTool>();
 
-    var app = builder.Build();
-
-    app.Use(async (context, next) =>
+        app = builder.Build();
+    }
+    catch (Exception ex)
     {
-        if (context.Request.Path == "/" || context.Request.Path.StartsWithSegments("/mcp"))
-        {
-            // Some MCP clients keep sending a cached session header even when the
-            // server is stateless. Strip it so reconnects after restarts still work.
-            context.Request.Headers.Remove("Mcp-Session-Id");
-            context.Request.Headers.Remove("mcp-session-id");
-        }
+        await rpcClient.LogAsync($"Failed to build HTTP server: {ex.Message}");
+        rpcClient.Dispose();
+        return;
+    }
 
-        await next();
-    });
+    try
+    {
+        app.MapMcp("/").AllowAnonymous();
+        app.MapMcp("/mcp").AllowAnonymous();
 
-    app.MapMcp("/");
-    app.MapMcp("/mcp");
+        // RFC 9728: serve protected resource metadata with no authorization_servers
+        // to tell MCP clients (e.g. Copilot) this server is public and needs no OAuth.
+        app.MapGet("/.well-known/oauth-protected-resource", (HttpContext ctx) =>
+            Microsoft.AspNetCore.Http.Results.Json(new
+            {
+                resource = $"{ctx.Request.Scheme}://{ctx.Request.Host}",
+                authorization_servers = Array.Empty<string>()
+            })).AllowAnonymous();
 
-    var bindingUrl = $"http://{host}:{port}";
-    app.Urls.Add(bindingUrl);
+        var bindingUrl = $"http://{host}:{port}";
+        app.Urls.Add(bindingUrl);
 
-    var lifetime = app.Services.GetRequiredService<IHostApplicationLifetime>();
-    shutdownCts.Token.Register(() => lifetime.StopApplication());
+        var lifetime = app.Services.GetRequiredService<IHostApplicationLifetime>();
+        shutdownCts.Token.Register(() => lifetime.StopApplication());
 
-    Console.Error.WriteLine($"Roslyn MCP Server listening on {bindingUrl}");
-    Console.Error.WriteLine($"Streamable HTTP endpoint: {bindingUrl}/mcp (stateless)");
-    Console.Error.WriteLine("Tools: roslyn_validate_file, roslyn_find_references, roslyn_go_to_definition, roslyn_get_document_symbols, roslyn_search_symbols, roslyn_find_dead_code, roslyn_get_symbol_info");
+        await rpcClient.LogAsync($"MCP Server listening on {bindingUrl}");
+        await rpcClient.LogAsync($"Streamable HTTP: {bindingUrl}/mcp | Legacy SSE: {bindingUrl}/sse");
+        await rpcClient.LogAsync("Tools: roslyn_validate_file, roslyn_find_references, roslyn_go_to_definition, roslyn_get_document_symbols, roslyn_search_symbols, roslyn_find_dead_code, roslyn_get_symbol_info");
 
-    await app.RunAsync();
-    Console.Error.WriteLine("Server shutdown complete");
+        await app.RunAsync();
+        await rpcClient.LogAsync("Server shutdown complete");
+    }
+    catch (IOException ex)
+    {
+        await rpcClient.LogAsync($"HTTP server failed (port {port} may already be in use): {ex.Message}");
+    }
+    catch (Exception ex)
+    {
+        await rpcClient.LogAsync($"HTTP server error: {ex.GetType().Name}: {ex.Message}");
+    }
+    finally
+    {
+        rpcClient.Dispose();
+    }
 }
