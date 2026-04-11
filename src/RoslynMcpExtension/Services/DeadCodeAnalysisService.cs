@@ -335,7 +335,9 @@ internal class DeadCodeAnalysisService(DocumentFinder documentFinder)
 			"ImportManyAttribute",
 			"ImportingConstructorAttribute",
 			"PackageRegistrationAttribute",
-			"Microsoft.VisualStudio.Shell.PackageRegistrationAttribute");
+			"Microsoft.VisualStudio.Shell.PackageRegistrationAttribute",
+			"McpServerToolAttribute",
+			"McpServerToolTypeAttribute");
 	}
 
 	private static bool HasTestMethodAttributes(IMethodSymbol method)
