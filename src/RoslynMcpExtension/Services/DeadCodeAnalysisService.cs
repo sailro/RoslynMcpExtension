@@ -71,6 +71,8 @@ internal class DeadCodeAnalysisService(DocumentFinder documentFinder)
 		{
 			var solution = documentFinder.Workspace.CurrentSolution;
 			var xamlReferences = XamlReferenceIndex.Create(solution);
+			var testTypeIndex = new TestTypeIndex(solution);
+			var derivedTypeReferenceIndex = new DerivedTypeReferenceIndex(solution, xamlReferences, testTypeIndex);
 			var candidates = await CollectCandidatesAsync(solution, includeInternal, includePublic);
 			var deadCount = 0;
 
@@ -79,7 +81,7 @@ internal class DeadCodeAnalysisService(DocumentFinder documentFinder)
 				         .ThenBy(c => c.Location.SourceTree?.FilePath, StringComparer.OrdinalIgnoreCase)
 				         .ThenBy(c => c.Location.SourceSpan.Start))
 			{
-				if (await HasSourceReferencesAsync(candidate.Symbol, solution, xamlReferences))
+				if (await HasSourceReferencesAsync(candidate.Symbol, solution, xamlReferences, testTypeIndex, derivedTypeReferenceIndex))
 					continue;
 
 				deadCount++;
@@ -278,21 +280,31 @@ internal class DeadCodeAnalysisService(DocumentFinder documentFinder)
 		};
 	}
 
-	private static async Task<bool> HasSourceReferencesAsync(ISymbol symbol, Solution solution, XamlReferenceIndex xamlReferences)
+	private static async Task<bool> HasSourceReferencesAsync(
+		ISymbol symbol,
+		Solution solution,
+		XamlReferenceIndex xamlReferences,
+		TestTypeIndex testTypeIndex,
+		DerivedTypeReferenceIndex derivedTypeReferenceIndex)
 	{
+		if (await testTypeIndex.IsTestRelatedAsync(symbol))
+			return true;
+
 		var references = await SymbolFinder.FindReferencesAsync(symbol, solution, cancellationToken: CancellationToken.None);
 		if (references.Any(reference => reference.Locations.Any(location => location.Location.IsInSource)))
 			return true;
 
 		if (symbol is IMethodSymbol method)
 		{
-			if (await HasPairedXamlReferenceAsync(method))
+			if (xamlReferences.ReferencesMember(method))
 				return true;
 
 			if (method.MethodKind == MethodKind.Constructor
 			    && method.Parameters.Length == 0
 			    && method.ContainingType != null
-			    && xamlReferences.ReferencesType(method.ContainingType))
+			    && (IsLikelyFrameworkActivatedType(method.ContainingType)
+			        || await xamlReferences.ReferencesTypeOrDerivedTypeAsync(method.ContainingType, solution)
+			        || await derivedTypeReferenceIndex.HasReferencedDerivedTypeAsync(method.ContainingType)))
 			{
 				return true;
 			}
@@ -301,7 +313,15 @@ internal class DeadCodeAnalysisService(DocumentFinder documentFinder)
 		if (symbol is INamedTypeSymbol type && xamlReferences.ReferencesType(type))
 			return true;
 
-		return symbol is IFieldSymbol field && await HasSameDocumentReferenceAsync(field, solution);
+		if (symbol is IFieldSymbol field)
+		{
+			if (xamlReferences.ReferencesMember(field))
+				return true;
+
+			return await HasSameDocumentReferenceAsync(field, solution);
+		}
+
+		return false;
 	}
 
 	private static string GetMemberType(ISymbol symbol)
@@ -446,18 +466,21 @@ internal class DeadCodeAnalysisService(DocumentFinder documentFinder)
 
 	private static bool IsExtensionContainer(INamedTypeSymbol type)
 	{
-		if (IsDeclaredInExtensionBlock(type))
+		if (IsDeclaredInExtensionBlock(type) || LooksLikeExtensionBlockSymbol(type))
 			return true;
 
 		if (!type.IsStatic)
 			return false;
 
 		return type.GetMembers().OfType<IMethodSymbol>().Any(member => member.IsExtensionMethod || IsDeclaredInExtensionBlock(member))
-		       || type.GetTypeMembers().Any(IsDeclaredInExtensionBlock);
+		       || type.GetTypeMembers().Any(nestedType => IsDeclaredInExtensionBlock(nestedType) || LooksLikeExtensionBlockSymbol(nestedType));
 	}
 
 	private static bool IsDeclaredInExtensionBlock(ISymbol symbol)
 	{
+		if (LooksLikeExtensionBlockSymbol(symbol))
+			return true;
+
 		foreach (var syntaxReference in symbol.DeclaringSyntaxReferences)
 		{
 			for (var current = syntaxReference.GetSyntax(CancellationToken.None); current != null; current = current.Parent)
@@ -470,33 +493,33 @@ internal class DeadCodeAnalysisService(DocumentFinder documentFinder)
 		return false;
 	}
 
-	private static Task<bool> HasPairedXamlReferenceAsync(IMethodSymbol method)
+	private static bool LooksLikeExtensionBlockSymbol(ISymbol symbol)
 	{
-		if (method.MethodKind != MethodKind.Ordinary)
-			return Task.FromResult(false);
+		if (string.Equals(symbol.Name, "extension", StringComparison.Ordinal))
+			return true;
 
-		foreach (var filePath in method.Locations
-			         .Where(location => location.IsInSource)
-			         .Select(location => location.SourceTree?.FilePath)
-			         .Where(path => !string.IsNullOrWhiteSpace(path))
-			         .Distinct(StringComparer.OrdinalIgnoreCase))
+		var displayName = symbol.ToDisplayString(SymbolDisplayFormat.CSharpErrorMessageFormat);
+		return displayName.StartsWith("extension(", StringComparison.Ordinal)
+		       || displayName.IndexOf(".extension(", StringComparison.Ordinal) >= 0;
+	}
+
+	private static bool IsLikelyFrameworkActivatedType(INamedTypeSymbol type)
+	{
+		return HasAnyAttribute(type, "GuidAttribute", "System.Runtime.InteropServices.GuidAttribute")
+		       || InheritsFrom(type, "Microsoft.VisualStudio.Shell.ToolWindowPane")
+		       || InheritsFrom(type, "Microsoft.VisualStudio.PlatformUI.DialogWindow")
+		       || InheritsFrom(type, "Microsoft.Internal.VisualStudio.PlatformUI.DialogWindow");
+	}
+
+	private static bool InheritsFrom(ITypeSymbol type, string fullTypeName)
+	{
+		for (var current = type; current != null; current = current.BaseType)
 		{
-			if (!filePath!.EndsWith(".xaml.cs", StringComparison.OrdinalIgnoreCase))
-				continue;
-
-			var xamlPath = filePath.Substring(0, filePath.Length - 3);
-			if (!File.Exists(xamlPath))
-				continue;
-
-			var xamlText = File.ReadAllText(xamlPath);
-			if (xamlText.Contains($"=\"{method.Name}\"", StringComparison.Ordinal)
-			    || xamlText.Contains($"='{method.Name}'", StringComparison.Ordinal))
-			{
-				return Task.FromResult(true);
-			}
+			if (string.Equals(current.ToDisplayString(), fullTypeName, StringComparison.Ordinal))
+				return true;
 		}
 
-		return Task.FromResult(false);
+		return false;
 	}
 
 	private static async Task<bool> HasSameDocumentReferenceAsync(IFieldSymbol field, Solution solution)
@@ -580,9 +603,85 @@ internal class DeadCodeAnalysisService(DocumentFinder documentFinder)
 		public Location Location { get; } = location;
 	}
 
+	private sealed class TestTypeIndex(Solution solution)
+	{
+		private readonly Dictionary<string, bool> _testRelatedCache = new(StringComparer.Ordinal);
+
+		public async Task<bool> IsTestRelatedAsync(ISymbol symbol)
+		{
+			var type = symbol as INamedTypeSymbol ?? symbol.ContainingType;
+			return type != null && await IsTestRelatedTypeAsync(type);
+		}
+
+		private async Task<bool> IsTestRelatedTypeAsync(INamedTypeSymbol type)
+		{
+			var key = type.ToDisplayString();
+			if (_testRelatedCache.TryGetValue(key, out var isTestRelated))
+				return isTestRelated;
+
+			_testRelatedCache[key] = false;
+
+			if (IsTestContainer(type))
+			{
+				_testRelatedCache[key] = true;
+				return true;
+			}
+
+			if (type.TypeKind != TypeKind.Class)
+				return false;
+
+			foreach (var derivedType in await SymbolFinder.FindDerivedClassesAsync(type, solution, cancellationToken: CancellationToken.None))
+			{
+				if (await IsTestRelatedTypeAsync(derivedType))
+				{
+					_testRelatedCache[key] = true;
+					return true;
+				}
+			}
+
+			return false;
+		}
+	}
+
+	private sealed class DerivedTypeReferenceIndex(Solution solution, XamlReferenceIndex xamlReferences, TestTypeIndex testTypeIndex)
+	{
+		private readonly Dictionary<string, bool> _referencedDerivedTypeCache = new(StringComparer.Ordinal);
+
+		public async Task<bool> HasReferencedDerivedTypeAsync(INamedTypeSymbol type)
+		{
+			var key = type.ToDisplayString();
+			if (_referencedDerivedTypeCache.TryGetValue(key, out var hasReferencedDerivedType))
+				return hasReferencedDerivedType;
+
+			_referencedDerivedTypeCache[key] = false;
+
+			foreach (var derivedType in await SymbolFinder.FindDerivedClassesAsync(type, solution, cancellationToken: CancellationToken.None))
+			{
+				if (await testTypeIndex.IsTestRelatedAsync(derivedType)
+				    || IsLikelyFrameworkActivatedType(derivedType)
+				    || xamlReferences.ReferencesType(derivedType))
+				{
+					_referencedDerivedTypeCache[key] = true;
+					return true;
+				}
+
+				var references = await SymbolFinder.FindReferencesAsync(derivedType, solution, cancellationToken: CancellationToken.None);
+				if (references.Any(reference => reference.Locations.Any(location => location.Location.IsInSource)))
+				{
+					_referencedDerivedTypeCache[key] = true;
+					return true;
+				}
+			}
+
+			return false;
+		}
+	}
+
 	private sealed class XamlReferenceIndex(List<XamlFile> xamlFiles)
 	{
 		private readonly Dictionary<string, bool> _typeUsageCache = new(StringComparer.Ordinal);
+		private readonly Dictionary<string, bool> _typeOrDerivedUsageCache = new(StringComparer.Ordinal);
+		private readonly Dictionary<string, bool> _memberUsageCache = new(StringComparer.Ordinal);
 
 		public bool ReferencesType(INamedTypeSymbol type)
 		{
@@ -592,6 +691,45 @@ internal class DeadCodeAnalysisService(DocumentFinder documentFinder)
 
 			isUsed = ReferencesTypeCore(type);
 			_typeUsageCache[key] = isUsed;
+			return isUsed;
+		}
+
+		public async Task<bool> ReferencesTypeOrDerivedTypeAsync(INamedTypeSymbol type, Solution solution)
+		{
+			var key = type.ToDisplayString();
+			if (_typeOrDerivedUsageCache.TryGetValue(key, out var isUsed))
+				return isUsed;
+
+			if (ReferencesType(type))
+			{
+				_typeOrDerivedUsageCache[key] = true;
+				return true;
+			}
+
+			foreach (var derivedType in await SymbolFinder.FindDerivedClassesAsync(type, solution, cancellationToken: CancellationToken.None))
+			{
+				if (ReferencesType(derivedType))
+				{
+					_typeOrDerivedUsageCache[key] = true;
+					return true;
+				}
+			}
+
+			_typeOrDerivedUsageCache[key] = false;
+			return false;
+		}
+
+		public bool ReferencesMember(ISymbol symbol)
+		{
+			if (symbol.ContainingType == null || string.IsNullOrWhiteSpace(symbol.Name))
+				return false;
+
+			var key = $"{symbol.Kind}:{symbol.ToDisplayString(SymbolDisplayFormat.CSharpErrorMessageFormat)}";
+			if (_memberUsageCache.TryGetValue(key, out var isUsed))
+				return isUsed;
+
+			isUsed = ReferencesMemberCore(symbol);
+			_memberUsageCache[key] = isUsed;
 			return isUsed;
 		}
 
@@ -623,6 +761,62 @@ internal class DeadCodeAnalysisService(DocumentFinder documentFinder)
 			return false;
 		}
 
+		private bool ReferencesMemberCore(ISymbol symbol)
+		{
+			var containingType = symbol.ContainingType;
+			if (containingType == null)
+				return false;
+
+			var candidateNames = GetXamlMemberNames(symbol)
+				.Where(name => !string.IsNullOrWhiteSpace(name))
+				.Distinct(StringComparer.Ordinal)
+				.ToArray();
+
+			if (candidateNames.Length == 0)
+				return false;
+
+			var pairedXamlPaths = GetPairedXamlPaths(containingType);
+
+			foreach (var xamlFile in xamlFiles)
+			{
+				if (pairedXamlPaths.Contains(xamlFile.Path)
+				    && candidateNames.Any(name => ContainsXamlQuotedValue(xamlFile.Content, name)))
+				{
+					return true;
+				}
+
+				if (candidateNames.Any(name => ContainsXamlMemberReference(xamlFile.Content, containingType.Name, name)))
+					return true;
+			}
+
+			return false;
+		}
+
+		private static IEnumerable<string> GetXamlMemberNames(ISymbol symbol)
+		{
+			yield return symbol.Name;
+
+			if (symbol is IMethodSymbol method
+			    && method.MethodKind == MethodKind.Ordinary
+			    && method.IsStatic
+			    && (method.Name.StartsWith("Get", StringComparison.Ordinal)
+			        || method.Name.StartsWith("Set", StringComparison.Ordinal))
+			    && method.Name.Length > 3
+			    && method.Parameters.Length > 0
+			    && InheritsFrom(method.Parameters[0].Type, "System.Windows.DependencyObject"))
+			{
+				yield return method.Name.Substring(3);
+			}
+
+			if (symbol is IFieldSymbol field
+			    && field.IsStatic
+			    && field.Name.EndsWith("Property", StringComparison.Ordinal)
+			    && field.Name.Length > "Property".Length)
+			{
+				yield return field.Name.Substring(0, field.Name.Length - "Property".Length);
+			}
+		}
+
 		private static HashSet<string> GetPairedXamlPaths(INamedTypeSymbol type)
 		{
 			var paths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -642,6 +836,17 @@ internal class DeadCodeAnalysisService(DocumentFinder documentFinder)
 			}
 
 			return paths;
+		}
+
+		private static bool ContainsXamlQuotedValue(string xamlText, string value)
+		{
+			return xamlText.IndexOf($"=\"{value}\"", StringComparison.Ordinal) >= 0
+			       || xamlText.IndexOf($"='{value}'", StringComparison.Ordinal) >= 0;
+		}
+
+		private static bool ContainsXamlMemberReference(string xamlText, string typeName, string memberName)
+		{
+			return xamlText.IndexOf($"{typeName}.{memberName}", StringComparison.Ordinal) >= 0;
 		}
 
 		private static bool ContainsXamlAttributeValue(string xamlText, string attributeName, string value)
