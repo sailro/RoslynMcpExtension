@@ -49,12 +49,26 @@ The server auto-starts when a solution is loaded (configurable in **Tools > Opti
 
 You can also manually start/stop via **Tools > Start/Stop Roslyn MCP Server**.
 
+### Output Pane
+
+The extension logs all activity to a dedicated **"Roslyn MCP Extension"** pane in the Visual Studio Output window (**View > Output**, then select "Roslyn MCP Extension" from the dropdown). This includes:
+
+- **Server lifecycle**: start, stop, process exit, connection status
+- **Tool invocations**: each MCP tool call with name and elapsed time
+- **RPC events**: client connect/disconnect, pipe errors
+- **Exceptions**: any errors during server startup, command execution, or VS interaction
+- **MCP Server messages**: the HTTP server process logs back to the Output pane via RPC
+
 ### Configuration
 
-In **Tools > Options > Roslyn MCP Server**:
+In **Tools > Options > Roslyn MCP Extension**:
 - **Port**: HTTP port (default: `5050`)
 - **Server Name**: Name shown to MCP clients
 - **Auto Start**: Start automatically when a solution loads
+
+### Session Recovery
+
+The server supports transparent **session migration**. If the server is restarted (e.g. via Stop/Start commands or a solution switch), MCP clients with stale session IDs are automatically migrated to a new session — no client restart required.
 
 ### Connecting MCP Clients
 
@@ -88,9 +102,9 @@ Add to your `.vscode/mcp.json` or user settings:
 
 #### Any MCP Client
 
-Use **Streamable HTTP** with `http://localhost:5050/mcp` for GitHub Copilot and modern MCP clients.
-
-This server is intentionally configured in **stateless HTTP mode** so reconnects remain reliable across server restarts and solution changes. Legacy SSE endpoints are not required for the Roslyn tools and are not used by the recommended GitHub Copilot setup.
+The server exposes two transports:
+- **Streamable HTTP**: `http://localhost:5050/mcp` (recommended for modern MCP clients)
+- **Legacy SSE**: `http://localhost:5050/sse` (for backward compatibility with older clients)
 
 ### Dead Code Analysis
 
@@ -107,6 +121,37 @@ The analysis is intentionally conservative and already filters several common fa
 - **Inherited test base classes**: abstract base types whose derived classes are test containers
 
 Dead-code detection can never be perfect, especially for reflection-heavy or externally activated code, so results should still be reviewed before deletion.
+
+## Architecture
+
+```
+┌─────────────────────────────────────────────────────────┐
+│ Visual Studio (VSIX)                                    │
+│                                                         │
+│  RoslynMcpPackage                                       │
+│    ├── OutputLogger ──► "Roslyn MCP Extension" pane     │
+│    ├── RpcServer (named pipe, JSON-RPC)                 │
+│    ├── RoslynAnalysisService (MEF, VisualStudioWorkspace)│
+│    └── ServerProcessManager (dotnet process)            │
+│                        │                                │
+│                   Named Pipe                            │
+│                        │                                │
+├────────────────────────┼────────────────────────────────┤
+│ MCP Server Process     │                                │
+│                        ▼                                │
+│  RpcClient ◄──► IRoslynAnalysisRpc (proxy)              │
+│    ├── LogAsync() ──► OutputLogger (via RPC)            │
+│    └── Tool methods ──► Roslyn services (via RPC)       │
+│                                                         │
+│  ASP.NET Core (Kestrel)                                 │
+│    ├── /mcp (Streamable HTTP)                           │
+│    ├── /sse (Legacy SSE)                                │
+│    └── SessionMigrationHandler (stale session recovery) │
+│                                                         │
+│  MCP Tools: validate, references, definition, symbols,  │
+│             search, dead code, symbol info               │
+└─────────────────────────────────────────────────────────┘
+```
 
 ## Example Prompts
 
@@ -152,6 +197,8 @@ Find dead code including public members
 | Diagnostics | ✅ Live from VS compiler | ⚠️ Re-compiled separately |
 | Build integration | ✅ Uses VS compilation state | ❌ Separate compilation |
 | Setup | Install VSIX, no config needed | Configure solution path per project |
+| Logging | ✅ Dedicated Output pane | ❌ Console/file logs |
+| Session recovery | ✅ Transparent migration | ❌ Client must reconnect |
 
 ## License
 
