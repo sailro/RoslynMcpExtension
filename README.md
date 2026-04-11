@@ -116,43 +116,12 @@ The analysis is intentionally conservative and already filters several common fa
 - **Interface contracts**: both explicit and implicit interface implementations
 - **XAML usage**: event handlers, code-behind types, attached dependency properties, and parameterless constructors for controls and windows instantiated from `.xaml` — including base classes whose derived types are XAML-activated
 - **Visual Studio / MEF composition**: `Export`, `Import`, `ImportingConstructor`, and Visual Studio package types decorated with `PackageRegistrationAttribute`
+- **MCP tool entry points**: methods and types decorated with `McpServerToolAttribute` or `McpServerToolTypeAttribute`, which are invoked dynamically by the MCP framework
 - **Generated and interop code**: common generated files, compiler-generated members, and marshaling / `StructLayout` fields
 - **Extension patterns**: static extension containers, classic `this` extension methods, and newer C# `extension(...) { }` blocks
 - **Inherited test base classes**: abstract base types whose derived classes are test containers
 
 Dead-code detection can never be perfect, especially for reflection-heavy or externally activated code, so results should still be reviewed before deletion.
-
-## Architecture
-
-```
-┌─────────────────────────────────────────────────────────┐
-│ Visual Studio (VSIX)                                    │
-│                                                         │
-│  RoslynMcpPackage                                       │
-│    ├── OutputLogger ──► "Roslyn MCP Extension" pane     │
-│    ├── RpcServer (named pipe, JSON-RPC)                 │
-│    ├── RoslynAnalysisService (MEF, VisualStudioWorkspace)│
-│    └── ServerProcessManager (dotnet process)            │
-│                        │                                │
-│                   Named Pipe                            │
-│                        │                                │
-├────────────────────────┼────────────────────────────────┤
-│ MCP Server Process     │                                │
-│                        ▼                                │
-│  RpcClient ◄──► IRoslynAnalysisRpc (proxy)              │
-│    ├── LogAsync() ──► OutputLogger (via RPC)            │
-│    └── Tool methods ──► Roslyn services (via RPC)       │
-│                                                         │
-│  ASP.NET Core (Kestrel)                                 │
-│    ├── /mcp (Streamable HTTP)                           │
-│    ├── /sse (Legacy SSE)                                │
-│    └── SessionMigrationHandler (stale session recovery) │
-│                                                         │
-│  MCP Tools: validate, references, definition, symbols,  │
-│             search, dead code, symbol info               │
-└─────────────────────────────────────────────────────────┘
-```
-
 ## Example Prompts
 
 ```
