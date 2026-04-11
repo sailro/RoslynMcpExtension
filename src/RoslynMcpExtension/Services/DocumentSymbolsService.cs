@@ -9,9 +9,9 @@ namespace RoslynMcpExtension.Services;
 
 internal class DocumentSymbolsService(DocumentFinder documentFinder)
 {
-	public async Task<List<CodeMemberInfo>> GetDocumentSymbolsAsync(string filePath)
+	public async Task<List<DocumentSymbolInfo>> GetDocumentSymbolsAsync(string filePath)
 	{
-		var symbols = new List<CodeMemberInfo>();
+		var symbols = new List<DocumentSymbolInfo>();
 
 		try
 		{
@@ -32,7 +32,7 @@ internal class DocumentSymbolsService(DocumentFinder documentFinder)
 		return symbols;
 	}
 
-	private static void CollectSymbols(SyntaxNode node, SemanticModel semanticModel, List<CodeMemberInfo> symbols)
+	private static void CollectSymbols(SyntaxNode node, SemanticModel semanticModel, List<DocumentSymbolInfo> symbols)
 	{
 		foreach (var child in node.ChildNodes())
 		{
@@ -45,7 +45,7 @@ internal class DocumentSymbolsService(DocumentFinder documentFinder)
 		}
 	}
 
-	private static IEnumerable<CodeMemberInfo> CreateSymbolInfos(SyntaxNode node, SemanticModel semanticModel)
+	private static IEnumerable<DocumentSymbolInfo> CreateSymbolInfos(SyntaxNode node, SemanticModel semanticModel)
 	{
 		switch (node)
 		{
@@ -118,10 +118,10 @@ internal class DocumentSymbolsService(DocumentFinder documentFinder)
 		}
 	}
 
-	private static CodeMemberInfo CreateSymbolInfo(string name, SyntaxNode node, SemanticModel model)
+	private static DocumentSymbolInfo CreateSymbolInfo(string name, SyntaxNode node, SemanticModel model)
 	{
 		var declaredSymbol = model.GetDeclaredSymbol(node);
-		return CodeMemberInfoFactory.Create(
+		return CodeMemberInfoFactory.CreateDocumentSymbol(
 			declaredSymbol,
 			name,
 			"member",
@@ -142,7 +142,7 @@ internal class DocumentSymbolsService(DocumentFinder documentFinder)
 		};
 	}
 
-	private static void AddModifiers(CodeMemberInfo info, SyntaxTokenList modifiers)
+	private static void AddModifiers(DocumentSymbolInfo info, SyntaxTokenList modifiers)
 	{
 		info.Modifiers = [.. modifiers.Select(m => m.Text)];
 	}

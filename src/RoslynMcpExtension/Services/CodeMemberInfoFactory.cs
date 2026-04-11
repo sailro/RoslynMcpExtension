@@ -13,13 +13,65 @@ internal static class CodeMemberInfoFactory
         Location? location = null,
         string? projectName = null)
     {
-        var info = new CodeMemberInfo
+        var info = new CodeMemberInfo();
+        Populate(info, symbol, fallbackName, fallbackMemberType, location, projectName);
+        return info;
+    }
+
+    public static DetailedCodeMemberInfo CreateDetailed(
+        ISymbol? symbol,
+        string fallbackName,
+        string fallbackMemberType,
+        Location? location = null,
+        string? projectName = null)
+    {
+        var info = new DetailedCodeMemberInfo();
+        Populate(info, symbol, fallbackName, fallbackMemberType, location, projectName);
+        PopulateDetails(info, symbol);
+        return info;
+    }
+
+    public static DocumentSymbolInfo CreateDocumentSymbol(
+        ISymbol? symbol,
+        string fallbackName,
+        string fallbackMemberType,
+        Location? location = null,
+        string? projectName = null)
+    {
+        var info = new DocumentSymbolInfo();
+        Populate(info, symbol, fallbackName, fallbackMemberType, location, projectName);
+
+        switch (symbol)
         {
-            Name = fallbackName,
-            FullName = fallbackName,
-            MemberType = fallbackMemberType,
-            ProjectName = projectName
-        };
+            case IMethodSymbol methodSymbol:
+                info.ReturnType = methodSymbol.ReturnType.ToDisplayString();
+                break;
+            case IPropertySymbol propertySymbol:
+                info.ReturnType = propertySymbol.Type.ToDisplayString();
+                break;
+            case IFieldSymbol fieldSymbol:
+                info.ReturnType = fieldSymbol.Type.ToDisplayString();
+                break;
+            case IEventSymbol eventSymbol:
+                info.ReturnType = eventSymbol.Type.ToDisplayString();
+                break;
+        }
+
+        return info;
+    }
+
+    private static void Populate(
+        CodeMemberInfo info,
+        ISymbol? symbol,
+        string fallbackName,
+        string fallbackMemberType,
+        Location? location,
+        string? projectName)
+    {
+        info.Name = fallbackName;
+        info.FullName = fallbackName;
+        info.MemberType = fallbackMemberType;
+        info.ProjectName = projectName;
 
         if (location?.IsInSource == true)
         {
@@ -32,16 +84,23 @@ internal static class CodeMemberInfoFactory
         }
 
         if (symbol == null)
-            return info;
+            return;
 
         if (string.IsNullOrWhiteSpace(info.Name))
             info.Name = symbol.Name;
 
         info.FullName = symbol.ToDisplayString();
         info.MemberType = GetMemberType(symbol);
+        info.Accessibility = symbol.DeclaredAccessibility.ToString();
+    }
+
+    private static void PopulateDetails(DetailedCodeMemberInfo info, ISymbol? symbol)
+    {
+        if (symbol == null)
+            return;
+
         info.ContainingType = symbol.ContainingType?.ToDisplayString();
         info.ContainingNamespace = symbol.ContainingNamespace?.ToDisplayString();
-        info.Accessibility = symbol.DeclaredAccessibility.ToString();
         info.IsStatic = symbol.IsStatic;
         info.IsAbstract = symbol.IsAbstract;
         info.IsVirtual = symbol.IsVirtual;
@@ -83,8 +142,6 @@ internal static class CodeMemberInfoFactory
                 info.ReturnType = parameterSymbol.Type.ToDisplayString();
                 break;
         }
-
-        return info;
     }
 
     public static string GetMemberType(ISymbol symbol)

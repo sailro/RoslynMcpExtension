@@ -63,7 +63,7 @@ public sealed class RpcClient(CancellationTokenSource shutdownCts) : IRoslynAnal
     public Task<GoToDefinitionResult> GoToDefinitionAsync(string filePath, int line, int column)
         => Proxy.GoToDefinitionAsync(filePath, line, column);
 
-    public Task<List<CodeMemberInfo>> GetDocumentSymbolsAsync(string filePath)
+    public Task<List<DocumentSymbolInfo>> GetDocumentSymbolsAsync(string filePath)
         => Proxy.GetDocumentSymbolsAsync(filePath);
 
     public Task<SearchSymbolsResult> SearchSymbolsAsync(string query, int maxResults)

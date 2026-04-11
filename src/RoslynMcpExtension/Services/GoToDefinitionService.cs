@@ -38,7 +38,7 @@ internal class GoToDefinitionService(DocumentFinder documentFinder)
 			}
 
 			result.Found = true;
-			result.Member = CodeMemberInfoFactory.Create(
+			result.Member = CodeMemberInfoFactory.CreateDetailed(
 				symbol,
 				symbol.Name,
 				"member",

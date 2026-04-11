@@ -39,7 +39,7 @@ internal class SymbolInfoService(DocumentFinder documentFinder)
 
 			result.Found = true;
 			var location = symbol.Locations.FirstOrDefault(l => l.IsInSource);
-			result.Member = CodeMemberInfoFactory.Create(symbol, symbol.Name, "member", location);
+			result.Member = CodeMemberInfoFactory.CreateDetailed(symbol, symbol.Name, "member", location);
 		}
 		catch (Exception ex)
 		{

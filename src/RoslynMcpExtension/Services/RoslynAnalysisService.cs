@@ -22,7 +22,7 @@ public class RoslynAnalysisService(VisualStudioWorkspace workspace) : IRoslynAna
 	public Task<GoToDefinitionResult> GoToDefinitionAsync(string filePath, int line, int column)
 		=> new GoToDefinitionService(_documentFinder).GoToDefinitionAsync(filePath, line, column);
 
-	public Task<List<CodeMemberInfo>> GetDocumentSymbolsAsync(string filePath)
+	public Task<List<DocumentSymbolInfo>> GetDocumentSymbolsAsync(string filePath)
 		=> new DocumentSymbolsService(_documentFinder).GetDocumentSymbolsAsync(filePath);
 
 	public Task<SearchSymbolsResult> SearchSymbolsAsync(string query, int maxResults)
